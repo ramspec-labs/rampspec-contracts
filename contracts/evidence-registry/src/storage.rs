@@ -28,6 +28,7 @@ pub(crate) fn set_instance_state(env: &Env, admin: &Address, schema_version: u32
     storage.set(&InstanceKeyV1::Admin, admin);
     storage.set(&InstanceKeyV1::Paused, &false);
     storage.set(&InstanceKeyV1::SchemaVersion, &schema_version);
+    storage.extend_ttl(103_680, 2_073_600);
 }
 
 pub(crate) fn is_paused(env: &Env) -> Result<bool, ContractError> {
