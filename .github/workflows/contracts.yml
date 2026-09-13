@@ -37,7 +37,10 @@ jobs:
       - run: diff -u artifacts/wasm/checksums.sha256 artifacts/repeat-wasm/checksums.sha256
       - run: |
           if [ -f scripts/verify-generated.sh ]; then bash scripts/verify-generated.sh; fi
-          if [ -f fuzz/Cargo.toml ]; then cargo check --manifest-path fuzz/Cargo.toml --all-targets; fi
+          if [ -f fuzz/Cargo.toml ]; then
+            cargo install --locked cargo-fuzz --version 0.13.2
+            (cd fuzz && cargo fuzz check)
+          fi
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: contract-wasm-${{ github.sha }}

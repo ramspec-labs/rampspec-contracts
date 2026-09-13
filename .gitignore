@@ -1,5 +1,8 @@
 /target/
 contracts/*/test_snapshots/
+/fuzz/artifacts/
+/fuzz/corpus/
+/fuzz/target/
 /.stellar/
 *.wasm
 *.wasm.sha256

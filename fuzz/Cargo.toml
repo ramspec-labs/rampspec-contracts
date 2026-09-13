@@ -1,0 +1,30 @@
+[package]
+name = "rampspec-contract-fuzz"
+version = "0.0.0"
+publish = false
+edition = "2024"
+
+[package.metadata]
+cargo-fuzz = true
+
+[dependencies]
+evidence-registry = { path = "../contracts/evidence-registry" }
+libfuzzer-sys = "=0.4.13"
+rampspec-shared-types = { path = "../crates/shared-types" }
+soroban-sdk = { version = "=27.0.0", features = ["testutils"] }
+
+[[bin]]
+name = "decode_evidence"
+path = "fuzz_targets/decode_evidence.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "registry_transitions"
+path = "fuzz_targets/registry_transitions.rs"
+test = false
+doc = false
+bench = false
+
+[workspace]
