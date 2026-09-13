@@ -1,0 +1,92 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://rampspec.org/schemas/contract-deployment-manifest-v1.json",
+  "title": "RampSpec contract deployment manifest",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion", "environment", "rpcUrl", "networkPassphrase", "sourceRelease",
+    "sourceRevision", "startLedger", "latestLedger", "transactions", "contracts",
+    "wasmSha256", "administrators", "attestor", "fixtureTestOnly", "verification",
+    "verifiedAt", "integritySha256"
+  ],
+  "allOf": [{
+    "if": { "properties": { "environment": { "const": "pubnet" } } },
+    "then": {
+      "properties": {
+        "contracts": { "properties": { "policyAccountFixture": { "type": "null" }, "webAuthFixture": { "type": "null" } } },
+        "wasmSha256": { "properties": { "policyAccountFixture": { "type": "null" }, "webAuthFixture": { "type": "null" } } },
+        "administrators": { "properties": { "policyAccountFixture": { "type": "null" }, "webAuthFixture": { "type": "null" } } }
+      }
+    },
+    "else": {
+      "properties": {
+        "contracts": { "properties": { "policyAccountFixture": { "$ref": "#/$defs/contract" }, "webAuthFixture": { "$ref": "#/$defs/contract" } } },
+        "wasmSha256": { "properties": { "policyAccountFixture": { "$ref": "#/$defs/hash" }, "webAuthFixture": { "$ref": "#/$defs/hash" } } },
+        "administrators": { "properties": { "policyAccountFixture": { "$ref": "#/$defs/account" }, "webAuthFixture": { "$ref": "#/$defs/account" } } }
+      }
+    }
+  }],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "environment": { "enum": ["local", "testnet", "pubnet"] },
+    "rpcUrl": { "type": "string", "format": "uri", "pattern": "^https?://" },
+    "networkPassphrase": { "type": "string", "minLength": 1 },
+    "sourceRelease": { "type": "string", "minLength": 1 },
+    "sourceRevision": { "$ref": "#/$defs/revision" },
+    "startLedger": { "type": "integer", "minimum": 1 },
+    "latestLedger": { "type": "integer", "minimum": 1 },
+    "transactions": {
+      "type": "array", "minItems": 1, "uniqueItems": true,
+      "items": { "$ref": "#/$defs/hash" }
+    },
+    "contracts": { "$ref": "#/$defs/contracts" },
+    "wasmSha256": { "$ref": "#/$defs/hashes" },
+    "administrators": { "$ref": "#/$defs/administrators" },
+    "attestor": { "$ref": "#/$defs/account" },
+    "fixtureTestOnly": { "const": true },
+    "verification": {
+      "type": "object", "additionalProperties": false,
+      "required": ["codeHashes", "reads", "writes", "events"],
+      "properties": {
+        "codeHashes": { "const": true }, "reads": { "const": true },
+        "writes": { "const": true }, "events": { "const": true }
+      }
+    },
+    "verifiedAt": { "type": "string", "format": "date-time" },
+    "integritySha256": { "$ref": "#/$defs/hash" }
+  },
+  "$defs": {
+    "hash": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "revision": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
+    "contract": { "type": "string", "pattern": "^C[A-Z2-7]{55}$" },
+    "account": { "type": "string", "pattern": "^G[A-Z2-7]{55}$" },
+    "contracts": {
+      "type": "object", "additionalProperties": false,
+      "required": ["evidenceRegistry", "policyAccountFixture", "webAuthFixture"],
+      "properties": {
+        "evidenceRegistry": { "$ref": "#/$defs/contract" },
+        "policyAccountFixture": { "anyOf": [{ "$ref": "#/$defs/contract" }, { "type": "null" }] },
+        "webAuthFixture": { "anyOf": [{ "$ref": "#/$defs/contract" }, { "type": "null" }] }
+      }
+    },
+    "hashes": {
+      "type": "object", "additionalProperties": false,
+      "required": ["evidenceRegistry", "policyAccountFixture", "webAuthFixture"],
+      "properties": {
+        "evidenceRegistry": { "$ref": "#/$defs/hash" },
+        "policyAccountFixture": { "anyOf": [{ "$ref": "#/$defs/hash" }, { "type": "null" }] },
+        "webAuthFixture": { "anyOf": [{ "$ref": "#/$defs/hash" }, { "type": "null" }] }
+      }
+    },
+    "administrators": {
+      "type": "object", "additionalProperties": false,
+      "required": ["evidenceRegistry", "policyAccountFixture", "webAuthFixture"],
+      "properties": {
+        "evidenceRegistry": { "$ref": "#/$defs/account" },
+        "policyAccountFixture": { "anyOf": [{ "$ref": "#/$defs/account" }, { "type": "null" }] },
+        "webAuthFixture": { "anyOf": [{ "$ref": "#/$defs/account" }, { "type": "null" }] }
+      }
+    }
+  }
+}

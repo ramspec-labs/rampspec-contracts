@@ -2,6 +2,7 @@ import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
+import { addGlobalArgs, sealDeploymentManifest } from "./deployment-manifest-core.mjs";
 
 const runtimeDirectory = resolve(process.argv[2] ?? "deployments/local/runtime");
 const containerName = process.env.RAMPSPEC_LOCAL_CONTAINER ?? "rampspec-local";
@@ -9,9 +10,11 @@ const configDirectory = join(runtimeDirectory, "stellar-config");
 const artifactDirectory = resolve("artifacts/wasm");
 const network = "local";
 const passphrase = "Standalone Network ; February 2017";
+const rpcUrl = "http://localhost:8000/soroban/rpc";
 
 function stellar(args, options = {}) {
-  return execFileSync("stellar", [...args, "--config-dir", configDirectory], {
+  const command = addGlobalArgs(args, ["--config-dir", configDirectory]);
+  return execFileSync("stellar", command, {
     encoding: "utf8",
     stdio: options.capture ? ["ignore", "pipe", "inherit"] : "inherit",
   })?.trim();
@@ -36,7 +39,11 @@ await mkdir(runtimeDirectory, { recursive: true });
 if (process.env.RAMPSPEC_USE_EXISTING_LOCAL !== "1") {
   stellar(["container", "start", "local", "--name", containerName]);
 }
-stellar(["network", "info", "--network", network, "--output", "json"], { capture: true });
+const networkInfoBefore = JSON.parse(
+  stellar(["network", "info", "--network", network, "--output", "json"], { capture: true }),
+);
+const startLedger = Number(networkInfoBefore.latestLedger);
+if (!Number.isSafeInteger(startLedger) || startLedger < 1) throw new Error("local RPC returned no valid ledger");
 
 for (const identity of ["deployer", "registry-admin", "web-auth-admin", "policy-admin", "attestor"]) {
   stellar(["keys", "generate", identity, "--network", network, "--fund", "--overwrite"]);
@@ -117,11 +124,24 @@ const hashes = {
 const networkInfo = JSON.parse(
   stellar(["network", "info", "--network", network, "--output", "json"], { capture: true }),
 );
-const manifest = {
+const events = JSON.parse(stellar([
+  "events", "--start-ledger", String(startLedger), "--count", "100", "--output", "json",
+  "--id", contracts.evidenceRegistry, contracts.webAuthFixture, contracts.policyAccountFixture,
+  "--network", network,
+], { capture: true }));
+const transactions = [...new Set(events.map((event) => event.txHash ?? event.tx_hash).filter(Boolean))];
+if (transactions.length < 6) throw new Error("local deployment transaction evidence is incomplete");
+const sourceRevision = execFileSync("git", ["rev-parse", "HEAD"], { encoding: "utf8" }).trim();
+const manifest = sealDeploymentManifest({
   schemaVersion: 1,
   environment: "local",
+  rpcUrl,
   networkPassphrase: passphrase,
-  latestLedger: networkInfo.latestLedger,
+  sourceRelease: `local:${sourceRevision}`,
+  sourceRevision,
+  startLedger,
+  latestLedger: Number(networkInfo.latestLedger),
+  transactions,
   contracts,
   wasmSha256: hashes,
   administrators: {
@@ -131,8 +151,9 @@ const manifest = {
   },
   attestor: addresses.attestor,
   fixtureTestOnly: true,
-  verified: true,
+  verification: { codeHashes: true, reads: true, writes: true, events: true },
   verifiedAt: new Date().toISOString(),
-};
+});
+await writeFile(join(runtimeDirectory, "journey-events.json"), `${JSON.stringify(events, null, 2)}\n`, "utf8");
 await writeFile(join(runtimeDirectory, "manifest.json"), `${JSON.stringify(manifest, null, 2)}\n`, "utf8");
 process.stdout.write(`${join(runtimeDirectory, "manifest.json")}\n`);

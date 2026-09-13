@@ -2,6 +2,7 @@ import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
+import { addGlobalArgs, sealDeploymentManifest } from "./deployment-manifest-core.mjs";
 
 const PASSPHRASE = "Test SDF Network ; September 2015";
 const RPC_URL = "https://soroban-testnet.stellar.org";
@@ -38,7 +39,8 @@ const sourceRelease = required("RAMPSPEC_SOURCE_RELEASE");
 
 const networkArgs = ["--rpc-url", RPC_URL, "--network-passphrase", PASSPHRASE];
 function stellar(args, options = {}) {
-  return execFileSync("stellar", [...args, ...networkArgs], {
+  const command = addGlobalArgs(args, networkArgs);
+  return execFileSync("stellar", command, {
     encoding: "utf8",
     stdio: options.capture ? ["ignore", "pipe", "inherit"] : "inherit",
   })?.trim();
@@ -176,7 +178,7 @@ const transactions = [...new Set(events.map((event) => event.txHash ?? event.tx_
 if (transactions.length < 6) throw new Error("deployment transaction hashes were not captured from RPC events");
 const networkInfoAfter = JSON.parse(stellar(["network", "info", "--output", "json"], { capture: true }));
 
-const manifest = {
+const manifest = sealDeploymentManifest({
   schemaVersion: 1,
   environment: "testnet",
   rpcUrl: RPC_URL,
@@ -197,7 +199,7 @@ const manifest = {
   fixtureTestOnly: true,
   verification: { codeHashes: true, reads: true, writes: true, events: true },
   verifiedAt: new Date().toISOString(),
-};
+});
 await writeFile(join(runtimeDirectory, "journey-events.json"), `${JSON.stringify(events, null, 2)}\n`, "utf8");
 await writeFile(join(runtimeDirectory, "manifest.json"), `${JSON.stringify(manifest, null, 2)}\n`, "utf8");
 process.stdout.write(`${join(runtimeDirectory, "manifest.json")}\n`);
