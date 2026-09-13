@@ -68,6 +68,24 @@ pub struct PauseChanged {
     pub paused: bool,
 }
 
+#[contractevent]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct AdminProposed {
+    #[topic]
+    pub current_admin: Address,
+    #[topic]
+    pub pending_admin: Address,
+}
+
+#[contractevent]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct AdminChanged {
+    #[topic]
+    pub old_admin: Address,
+    #[topic]
+    pub new_admin: Address,
+}
+
 #[contract]
 pub struct EvidenceRegistry;
 
@@ -353,6 +371,35 @@ impl EvidenceRegistry {
         }
         storage::set_paused(&env, paused);
         PauseChanged { admin, paused }.publish(&env);
+        Ok(())
+    }
+
+    pub fn propose_admin(env: Env, new_admin: Address) -> Result<(), ContractError> {
+        let current_admin = storage::admin(&env)?;
+        current_admin.require_auth();
+        if new_admin == current_admin {
+            return Err(ContractError::Unauthorized);
+        }
+        storage::set_pending_admin(&env, &new_admin);
+        AdminProposed {
+            current_admin,
+            pending_admin: new_admin,
+        }
+        .publish(&env);
+        Ok(())
+    }
+
+    pub fn accept_admin(env: Env) -> Result<(), ContractError> {
+        let new_admin = storage::pending_admin(&env).ok_or(ContractError::AdminProposalMissing)?;
+        new_admin.require_auth();
+        let old_admin = storage::admin(&env)?;
+        storage::set_admin(&env, &new_admin);
+        storage::clear_pending_admin(&env);
+        AdminChanged {
+            old_admin,
+            new_admin,
+        }
+        .publish(&env);
         Ok(())
     }
 }
@@ -897,5 +944,60 @@ mod tests {
 
         env.set_auths(&[]);
         assert!(client.try_set_paused(&true).is_err());
+    }
+
+    #[test]
+    fn administrator_transfer_requires_proposal_and_acceptance() {
+        let (env, contract_id, admin) = setup();
+        let client = EvidenceRegistryClient::new(&env, &contract_id);
+        client.initialize(&admin, &SCHEMA_VERSION);
+        let first_candidate = Address::generate(&env);
+        let final_candidate = Address::generate(&env);
+        client.propose_admin(&first_candidate);
+        client.propose_admin(&final_candidate);
+        assert_eq!(
+            env.as_contract(&contract_id, || storage::pending_admin(&env)),
+            Some(final_candidate.clone())
+        );
+        client.accept_admin();
+        assert_eq!(
+            env.as_contract(&contract_id, || storage::admin(&env).unwrap()),
+            final_candidate
+        );
+        assert_eq!(
+            env.as_contract(&contract_id, || storage::pending_admin(&env)),
+            None
+        );
+        assert_eq!(
+            client.try_accept_admin(),
+            Err(Ok(ContractError::AdminProposalMissing))
+        );
+    }
+
+    #[test]
+    fn admin_proposal_rejects_self_and_requires_current_admin_auth() {
+        let (env, contract_id, admin) = setup();
+        let client = EvidenceRegistryClient::new(&env, &contract_id);
+        client.initialize(&admin, &SCHEMA_VERSION);
+        assert_eq!(
+            client.try_propose_admin(&admin),
+            Err(Ok(ContractError::Unauthorized))
+        );
+        env.set_auths(&[]);
+        assert!(client.try_propose_admin(&Address::generate(&env)).is_err());
+    }
+
+    #[test]
+    fn pending_admin_must_authorize_acceptance() {
+        let (env, contract_id, admin) = setup();
+        let client = EvidenceRegistryClient::new(&env, &contract_id);
+        client.initialize(&admin, &SCHEMA_VERSION);
+        client.propose_admin(&Address::generate(&env));
+        env.set_auths(&[]);
+        assert!(client.try_accept_admin().is_err());
+        assert_eq!(
+            env.as_contract(&contract_id, || storage::admin(&env).unwrap()),
+            admin
+        );
     }
 }

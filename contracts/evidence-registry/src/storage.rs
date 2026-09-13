@@ -24,6 +24,28 @@ pub(crate) fn admin(env: &Env) -> Result<Address, ContractError> {
         .ok_or(ContractError::NotInitialized)
 }
 
+pub(crate) fn set_admin(env: &Env, admin: &Address) {
+    let storage = env.storage().instance();
+    storage.set(&InstanceKeyV1::Admin, admin);
+    storage.extend_ttl(103_680, 2_073_600);
+}
+
+pub(crate) fn pending_admin(env: &Env) -> Option<Address> {
+    env.storage().instance().get(&InstanceKeyV1::PendingAdmin)
+}
+
+pub(crate) fn set_pending_admin(env: &Env, pending_admin: &Address) {
+    let storage = env.storage().instance();
+    storage.set(&InstanceKeyV1::PendingAdmin, pending_admin);
+    storage.extend_ttl(103_680, 2_073_600);
+}
+
+pub(crate) fn clear_pending_admin(env: &Env) {
+    env.storage()
+        .instance()
+        .remove(&InstanceKeyV1::PendingAdmin);
+}
+
 pub(crate) fn set_instance_state(env: &Env, admin: &Address, schema_version: u32) {
     let storage = env.storage().instance();
     storage.set(&InstanceKeyV1::Admin, admin);
