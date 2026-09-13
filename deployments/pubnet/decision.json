@@ -1,0 +1,29 @@
+{
+  "schemaVersion": 1,
+  "decision": "no-deploy",
+  "scope": "evidence-registry",
+  "currentClaim": "local-verification-only",
+  "maximumClaimUntilReview": "testnet-only",
+  "fixturesAllowed": false,
+  "pubnetManifest": null,
+  "deploymentTransaction": null,
+  "decidedAt": "2026-09-13T00:00:00.000Z",
+  "nextReviewAfter": "2026-12-13T00:00:00.000Z",
+  "gates": {
+    "interoperabilityNeed": "not-approved",
+    "securityReview": "not-started",
+    "remediation": "awaiting-review",
+    "signedRelease": "absent",
+    "adminCustody": "not-approved",
+    "attestorCustody": "not-approved",
+    "ttlCostBudget": "not-approved",
+    "monitoring": "not-active",
+    "incidentAndUpgradePolicy": "documented"
+  },
+  "reasons": [
+    "No independent security review or remediation closure exists.",
+    "No verified testnet deployment manifest or signed release exists.",
+    "Administrator and attestor custody have not received production governance approval.",
+    "Pubnet TTL cost budget and monitoring are not active."
+  ]
+}
