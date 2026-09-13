@@ -14,8 +14,7 @@ soroban-sdk.workspace = true
 
 [dev-dependencies]
 rampspec-test-support = { path = "../../crates/test-support" }
-soroban-sdk = { workspace = true, features = ["testutils"] }
+soroban-sdk = { workspace = true, features = ["hazmat-address", "testutils"] }
 
 [lints]
 workspace = true
-
