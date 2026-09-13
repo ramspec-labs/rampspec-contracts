@@ -8,6 +8,7 @@ contracts/*/test_snapshots/
 *.wasm.sha256
 /artifacts/reproducibility/
 /artifacts/wasm/
+/deployments/local/runtime/
 .env
 .env.*
 !.env.example
