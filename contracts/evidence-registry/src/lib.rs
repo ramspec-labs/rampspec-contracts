@@ -86,6 +86,14 @@ pub struct AdminChanged {
     pub new_admin: Address,
 }
 
+#[contractevent]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct Upgraded {
+    pub old_wasm_hash: BytesN<32>,
+    #[topic]
+    pub new_wasm_hash: BytesN<32>,
+}
+
 #[contract]
 pub struct EvidenceRegistry;
 
@@ -402,15 +410,44 @@ impl EvidenceRegistry {
         .publish(&env);
         Ok(())
     }
+
+    pub fn upgrade(env: Env, new_wasm_hash: BytesN<32>) -> Result<(), ContractError> {
+        if new_wasm_hash.to_array() == [0; 32] {
+            return Err(ContractError::InvalidHash);
+        }
+        if storage::is_paused(&env)? {
+            return Err(ContractError::Paused);
+        }
+        let admin = storage::admin(&env)?;
+        admin.require_auth();
+        let old_wasm_hash =
+            storage::current_wasm_hash(&env).unwrap_or_else(|| BytesN::from_array(&env, &[0; 32]));
+        if old_wasm_hash == new_wasm_hash {
+            return Err(ContractError::UpgradeNotAllowed);
+        }
+
+        env.deployer()
+            .update_current_contract_wasm(new_wasm_hash.clone());
+        storage::set_current_wasm_hash(&env, &new_wasm_hash);
+        Upgraded {
+            old_wasm_hash,
+            new_wasm_hash,
+        }
+        .publish(&env);
+        Ok(())
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use base64::{Engine as _, engine::general_purpose::STANDARD};
     use rampspec_shared_types::{InstanceKeyV1, NetworkKind};
     use soroban_sdk::{
-        Address, testutils::Address as _, testutils::Events as _, testutils::Ledger as _,
+        Address, Bytes, testutils::Address as _, testutils::Events as _, testutils::Ledger as _,
     };
+
+    const UPGRADE_TARGET_BASE64: &str = "AGFzbQEAAAABFARgAX4BfmACf34AYAJ+fgF+YAAAAg0CAWkBMAAAAWkBXwAAAwYFAQIDAwMFAwEAEAYZA38BQYCAwAALfwBBgIDAAAt/AEGAgMAACwcvBQZtZW1vcnkCAANhZGQAAwFfAAYKX19kYXRhX2VuZAMBC19faGVhcF9iYXNlAwIKjAIFXQIBfwF+AkACQCABp0H/AXEiAkHAAEYNAAJAIAJBBkYNAEIBIQNCg5CAgIABIQEMAgsgAUIIiCEBQgAhAwwBC0IAIQMgARCAgICAACEBCyAAIAE3AwggACADNwMAC5kBAQF/I4CAgIAAQSBrIgIkgICAgAAgAkEQaiAAEIKAgIAAAkACQCACKAIQDQAgAikDGCEAIAIgARCCgICAACACKQMApw0AIAAgAikDCHwiASAAVA0BAkACQCABQv//////////AFYNACABQgiGQgaEIQAMAQsgARCBgICAACEACyACQSBqJICAgIAAIAAPCwAACxCEgICAAAALCQAQhYCAgAAACwQAAAALAgALAEsOY29udHJhY3RzcGVjdjAAAAAAAAAAAAAAAANhZGQAAAAAAgAAAAAAAAABYQAAAAAAAAYAAAAAAAAAAWIAAAAAAAAGAAAAAQAAAAYAHhFjb250cmFjdGVudm1ldGF2MAAAAAAAAAAVAAAAAAB7DmNvbnRyYWN0bWV0YXYwAAAAAAAAAAVyc3ZlcgAAAAAAAAYxLjc0LjAAAAAAAAAAAAAIcnNzZGt2ZXIAAAA5MjEuMC4xLXByZXZpZXcuMSMxMTZjMzViYzllMDNmNGIxYjVlNjViNWVlODMxYWUwZjg2YWE5MmZkAAAA";
 
     fn setup() -> (Env, Address, Address) {
         let env = Env::default();
@@ -998,6 +1035,54 @@ mod tests {
         assert_eq!(
             env.as_contract(&contract_id, || storage::admin(&env).unwrap()),
             admin
+        );
+    }
+
+    #[test]
+    fn authorized_upgrade_replaces_code_and_preserves_storage() {
+        let (env, contract_id, admin) = setup();
+        let publisher = register_publisher(&env, &contract_id, &admin);
+        let client = EvidenceRegistryClient::new(&env, &contract_id);
+        let evidence_id = client.publish_evidence(&valid_input(&env, &publisher));
+        let wasm = STANDARD.decode(UPGRADE_TARGET_BASE64).unwrap();
+        let new_hash = env
+            .deployer()
+            .upload_contract_wasm(Bytes::from_slice(&env, &wasm));
+
+        client.upgrade(&new_hash);
+        let (stored_hash, stored_record) = env.as_contract(&contract_id, || {
+            (
+                storage::current_wasm_hash(&env).unwrap(),
+                storage::evidence(&env, &evidence_id).unwrap(),
+            )
+        });
+        assert_eq!(stored_hash, new_hash);
+        assert_eq!(stored_record.publisher, publisher);
+    }
+
+    #[test]
+    fn upgrade_rejects_invalid_repeated_paused_and_unauthorized_calls() {
+        let (env, contract_id, admin) = setup();
+        let client = EvidenceRegistryClient::new(&env, &contract_id);
+        client.initialize(&admin, &SCHEMA_VERSION);
+        let hash = BytesN::from_array(&env, &[61; 32]);
+        assert_eq!(
+            client.try_upgrade(&BytesN::from_array(&env, &[0; 32])),
+            Err(Ok(ContractError::InvalidHash))
+        );
+        env.as_contract(&contract_id, || storage::set_current_wasm_hash(&env, &hash));
+        assert_eq!(
+            client.try_upgrade(&hash),
+            Err(Ok(ContractError::UpgradeNotAllowed))
+        );
+        client.set_paused(&true);
+        assert_eq!(client.try_upgrade(&hash), Err(Ok(ContractError::Paused)));
+        client.set_paused(&false);
+        env.set_auths(&[]);
+        assert!(
+            client
+                .try_upgrade(&BytesN::from_array(&env, &[62; 32]))
+                .is_err()
         );
     }
 }

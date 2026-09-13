@@ -46,6 +46,18 @@ pub(crate) fn clear_pending_admin(env: &Env) {
         .remove(&InstanceKeyV1::PendingAdmin);
 }
 
+pub(crate) fn current_wasm_hash(env: &Env) -> Option<BytesN<32>> {
+    env.storage()
+        .instance()
+        .get(&InstanceKeyV1::CurrentWasmHash)
+}
+
+pub(crate) fn set_current_wasm_hash(env: &Env, hash: &BytesN<32>) {
+    let storage = env.storage().instance();
+    storage.set(&InstanceKeyV1::CurrentWasmHash, hash);
+    storage.extend_ttl(103_680, 2_073_600);
+}
+
 pub(crate) fn set_instance_state(env: &Env, admin: &Address, schema_version: u32) {
     let storage = env.storage().instance();
     storage.set(&InstanceKeyV1::Admin, admin);
