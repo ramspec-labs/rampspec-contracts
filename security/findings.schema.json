@@ -1,0 +1,56 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://rampspec.org/schemas/security-findings-v1.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "status", "reviewReportSha256", "findings", "acceptedResidualRisks", "updatedAt"],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "status": { "enum": ["awaiting-review", "triage", "remediation", "retest", "closed"] },
+    "reviewReportSha256": { "anyOf": [{ "$ref": "#/$defs/hash" }, { "type": "null" }] },
+    "findings": { "type": "array", "items": { "$ref": "#/$defs/finding" } },
+    "acceptedResidualRisks": {
+      "type": "array",
+      "items": {
+        "type": "object", "additionalProperties": false,
+        "required": ["findingId", "rationale", "approver", "approvedAt"],
+        "properties": {
+          "findingId": { "type": "string", "pattern": "^RS-[0-9]{3}$" },
+          "rationale": { "type": "string", "minLength": 1 },
+          "approver": { "type": "string", "minLength": 1 },
+          "approvedAt": { "type": "string", "format": "date-time" }
+        }
+      }
+    },
+    "updatedAt": { "type": "string", "format": "date-time" }
+  },
+  "$defs": {
+    "hash": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "finding": {
+      "type": "object", "additionalProperties": false,
+      "required": [
+        "id", "severity", "title", "status", "owner", "affectedPaths", "fixCommit",
+        "regressionTests", "propertyOrFuzzCoverage", "artifactsRegenerated", "testnetManifest",
+        "threatModelUpdated", "compatibilityUpdated", "retestProvider", "closureEvidence", "notes"
+      ],
+      "properties": {
+        "id": { "type": "string", "pattern": "^RS-[0-9]{3}$" },
+        "severity": { "enum": ["critical", "high", "moderate", "low", "informational"] },
+        "title": { "type": "string", "minLength": 1 },
+        "status": { "enum": ["open", "accepted", "fixed", "retested"] },
+        "owner": { "type": ["string", "null"] },
+        "affectedPaths": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+        "fixCommit": { "anyOf": [{ "type": "string", "pattern": "^[0-9a-f]{40}$" }, { "type": "null" }] },
+        "regressionTests": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+        "propertyOrFuzzCoverage": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+        "artifactsRegenerated": { "type": "boolean" },
+        "testnetManifest": { "type": ["string", "null"] },
+        "threatModelUpdated": { "type": "boolean" },
+        "compatibilityUpdated": { "type": "boolean" },
+        "retestProvider": { "type": ["string", "null"] },
+        "closureEvidence": { "type": ["string", "null"] },
+        "notes": { "type": "string" }
+      }
+    }
+  }
+}

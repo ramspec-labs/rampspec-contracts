@@ -28,6 +28,8 @@ jobs:
       - run: node --test scripts/deployment-manifest-core.test.mjs scripts/upgrade-rehearsal-core.test.mjs scripts/security-review-core.test.mjs
       - run: node scripts/validate-fixture-manifest.mjs
       - run: node scripts/prepare-security-review.mjs
+      - run: node --test scripts/security-readiness-core.test.mjs
+      - run: node scripts/verify-security-readiness.mjs --allow-pending
 
   wasm:
     runs-on: ubuntu-latest
