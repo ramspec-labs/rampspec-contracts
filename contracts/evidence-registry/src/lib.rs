@@ -39,6 +39,16 @@ pub struct EvidencePublished {
     pub suite_hash: BytesN<32>,
 }
 
+#[contractevent]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct EvidenceRevoked {
+    #[topic]
+    pub id: BytesN<32>,
+    #[topic]
+    pub revoker: Address,
+    pub reason_hash: BytesN<32>,
+}
+
 #[contract]
 pub struct EvidenceRegistry;
 
@@ -190,6 +200,36 @@ impl EvidenceRegistry {
     #[must_use]
     pub fn is_active(env: Env, id: BytesN<32>) -> bool {
         storage::evidence(&env, &id).is_some_and(|record| record.status == EvidenceStatus::Active)
+    }
+
+    pub fn revoke_evidence(
+        env: Env,
+        id: BytesN<32>,
+        reason_hash: BytesN<32>,
+        revoker: Address,
+    ) -> Result<(), ContractError> {
+        if reason_hash.to_array() == [0; 32] {
+            return Err(ContractError::InvalidHash);
+        }
+        let mut record = storage::evidence(&env, &id).ok_or(ContractError::EvidenceNotFound)?;
+        if record.status != EvidenceStatus::Active {
+            return Err(ContractError::EvidenceNotActive);
+        }
+        let admin = storage::admin(&env)?;
+        if revoker != record.publisher && revoker != admin {
+            return Err(ContractError::Unauthorized);
+        }
+        revoker.require_auth();
+
+        record.status = EvidenceStatus::Revoked;
+        storage::set_evidence(&env, &record);
+        EvidenceRevoked {
+            id,
+            revoker,
+            reason_hash,
+        }
+        .publish(&env);
+        Ok(())
     }
 }
 
@@ -496,5 +536,72 @@ mod tests {
         assert!(!client.get_attestor(&publisher).unwrap().enabled);
         assert!(client.is_active(&id));
         assert_eq!(env.events().all().events().len(), 0);
+    }
+
+    #[test]
+    fn publisher_and_admin_can_irreversibly_revoke() {
+        for use_admin in [false, true] {
+            let (env, contract_id, admin) = setup();
+            let publisher = register_publisher(&env, &contract_id, &admin);
+            let client = EvidenceRegistryClient::new(&env, &contract_id);
+            let id = client.publish_evidence(&valid_input(&env, &publisher));
+            let revoker = if use_admin {
+                admin.clone()
+            } else {
+                publisher.clone()
+            };
+            let reason = BytesN::from_array(&env, &[31; 32]);
+            client.revoke_evidence(&id, &reason, &revoker);
+
+            assert!(!client.is_active(&id));
+            assert_eq!(
+                client.get_evidence(&id).unwrap().status,
+                EvidenceStatus::Revoked
+            );
+            assert_eq!(
+                client.try_revoke_evidence(&id, &reason, &revoker),
+                Err(Ok(ContractError::EvidenceNotActive))
+            );
+        }
+    }
+
+    #[test]
+    fn revocation_rejects_missing_invalid_and_unauthorized_requests() {
+        let (env, contract_id, admin) = setup();
+        let publisher = register_publisher(&env, &contract_id, &admin);
+        let client = EvidenceRegistryClient::new(&env, &contract_id);
+        let id = client.publish_evidence(&valid_input(&env, &publisher));
+        let reason = BytesN::from_array(&env, &[31; 32]);
+        let stranger = Address::generate(&env);
+        assert_eq!(
+            client.try_revoke_evidence(&BytesN::from_array(&env, &[90; 32]), &reason, &admin),
+            Err(Ok(ContractError::EvidenceNotFound))
+        );
+        assert_eq!(
+            client.try_revoke_evidence(&id, &BytesN::from_array(&env, &[0; 32]), &admin),
+            Err(Ok(ContractError::InvalidHash))
+        );
+        assert_eq!(
+            client.try_revoke_evidence(&id, &reason, &stranger),
+            Err(Ok(ContractError::Unauthorized))
+        );
+        assert!(client.is_active(&id));
+    }
+
+    #[test]
+    fn superseded_evidence_cannot_be_revoked_again() {
+        let (env, contract_id, admin) = setup();
+        let publisher = register_publisher(&env, &contract_id, &admin);
+        let client = EvidenceRegistryClient::new(&env, &contract_id);
+        let id = client.publish_evidence(&valid_input(&env, &publisher));
+        env.as_contract(&contract_id, || {
+            let mut record = storage::evidence(&env, &id).unwrap();
+            record.status = EvidenceStatus::Superseded;
+            storage::set_evidence(&env, &record);
+        });
+        assert_eq!(
+            client.try_revoke_evidence(&id, &BytesN::from_array(&env, &[31; 32]), &publisher),
+            Err(Ok(ContractError::EvidenceNotActive))
+        );
     }
 }
