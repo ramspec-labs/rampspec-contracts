@@ -12,6 +12,7 @@ contracts/*/test_snapshots/
 /deployments/testnet/runtime/
 /artifacts/upgrade-rehearsals/
 /artifacts/security-review/
+/artifacts/releases/
 .env
 .env.*
 !.env.example

@@ -22,6 +22,7 @@
     "docs/deployment-manifests.md",
     "docs/fixtures.md",
     "docs/resource-budgets.md",
+    "docs/release-bundles.md",
     "docs/storage.md",
     "docs/ttl.md",
     "docs/upgrade-rehearsal.md",
@@ -35,6 +36,10 @@
     "scripts/deploy-local.mjs",
     "scripts/deploy-testnet.mjs",
     "scripts/verify-deployment-manifest.mjs",
+    "scripts/build-release.mjs",
+    "scripts/release-core.mjs",
+    "scripts/verify-release.mjs",
+    "release",
     "SECURITY.md",
     "security/review-scope.md",
     "security/threat-model.md"

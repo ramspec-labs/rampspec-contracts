@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://rampspec.org/schemas/contract-release-manifest-v1.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion", "status", "version", "sourceRevision", "sourceDirty",
+    "securityCleared", "testnetManifest", "signedTag", "checksumFileSha256", "createdAt"
+  ],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "status": { "enum": ["candidate", "released"] },
+    "version": { "type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+(?:-[0-9A-Za-z.-]+)?$" },
+    "sourceRevision": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
+    "sourceDirty": { "type": "boolean" },
+    "securityCleared": { "type": "boolean" },
+    "testnetManifest": { "type": ["string", "null"] },
+    "signedTag": { "type": "boolean" },
+    "checksumFileSha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "createdAt": { "type": "string", "format": "date-time" }
+  }
+}
