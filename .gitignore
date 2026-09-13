@@ -1,0 +1,7 @@
+/target/
+/.stellar/
+*.wasm
+*.wasm.sha256
+.env
+.env.*
+!.env.example

@@ -1,0 +1,22 @@
+name: Contract bug
+description: Report reproducible incorrect contract or tooling behavior
+body:
+  - type: textarea
+    id: behavior
+    attributes:
+      label: Observed behavior
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Reproduction
+      description: Do not include secrets, customer data, or unredacted reports.
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Release or commit
+    validations:
+      required: true

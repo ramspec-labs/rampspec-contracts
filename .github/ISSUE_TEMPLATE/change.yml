@@ -1,0 +1,21 @@
+name: Contract change
+description: Propose a narrowly scoped contract or delivery change
+body:
+  - type: textarea
+    id: requirement
+    attributes:
+      label: Requirement
+    validations:
+      required: true
+  - type: textarea
+    id: invariants
+    attributes:
+      label: Authorization, storage, privacy, and compatibility impact
+    validations:
+      required: true
+  - type: textarea
+    id: verification
+    attributes:
+      label: Required tests and generated artifacts
+    validations:
+      required: true
