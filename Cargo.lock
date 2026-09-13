@@ -1210,6 +1210,7 @@ dependencies = [
 name = "policy-account-fixture"
 version = "0.1.0"
 dependencies = [
+ "ed25519-dalek",
  "rampspec-shared-types",
  "rampspec-test-support",
  "soroban-sdk",

@@ -13,9 +13,9 @@ rampspec-shared-types = { path = "../../crates/shared-types" }
 soroban-sdk.workspace = true
 
 [dev-dependencies]
+ed25519-dalek = "=2.2.0"
 rampspec-test-support = { path = "../../crates/test-support" }
 soroban-sdk = { workspace = true, features = ["testutils"] }
 
 [lints]
 workspace = true
-
