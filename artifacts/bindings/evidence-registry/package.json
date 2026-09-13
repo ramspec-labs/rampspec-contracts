@@ -1,0 +1,30 @@
+{
+  "version": "0.1.0",
+  "name": "@rampspec/evidence-registry",
+  "type": "module",
+  "exports": "./dist/index.js",
+  "typings": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "check": "tsc --noEmit",
+    "test": "npm run build && node test/smoke.mjs"
+  },
+  "dependencies": {
+    "@stellar/stellar-sdk": "16.0.1",
+    "buffer": "6.0.3"
+  },
+  "devDependencies": {
+    "typescript": "5.6.2"
+  },
+  "description": "Generated RampSpec evidence-registry Soroban client",
+  "license": "Apache-2.0",
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "rampspec": {
+    "generator": "stellar-cli 27.1.0",
+    "specSha256": "36c536eaac035df1228b810d7ef62aaba6872172b5e19da9f53217d3943f84c5",
+    "wasmSha256": "89fe782c804492df9a928983e80356fb8c1c8d716327dbb2ba2689a0e894a1f3"
+  }
+}
