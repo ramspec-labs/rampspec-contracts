@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "status": "not-started",
+  "reviewTargetRevision": null,
+  "provider": null,
+  "reportPath": null,
+  "reportSha256": null,
+  "startedAt": null,
+  "completedAt": null,
+  "productionClaimsAllowed": false,
+  "pubnetAllowed": false,
+  "updatedAt": "2026-09-13T00:00:00.000Z"
+}

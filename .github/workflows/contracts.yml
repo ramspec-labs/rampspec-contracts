@@ -25,7 +25,9 @@ jobs:
       - run: cargo test --locked --workspace
       - run: cargo metadata --locked --format-version 1 --no-deps
       - run: node --test scripts/fixture-manifest-core.test.mjs
+      - run: node --test scripts/deployment-manifest-core.test.mjs scripts/upgrade-rehearsal-core.test.mjs scripts/security-review-core.test.mjs
       - run: node scripts/validate-fixture-manifest.mjs
+      - run: node scripts/prepare-security-review.mjs
 
   wasm:
     runs-on: ubuntu-latest
