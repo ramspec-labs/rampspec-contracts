@@ -6,7 +6,7 @@
 )]
 
 use soroban_sdk::{
-    Bytes, BytesN, Env, Vec,
+    Address, Bytes, BytesN, Env, Symbol, Vec,
     auth::{Context, CustomAccountInterface},
     contract, contracterror, contractimpl, contracttype,
     crypto::Hash,
@@ -25,6 +25,13 @@ pub enum PolicyError {
     DuplicateSigner = 5,
     UnauthorizedSigner = 6,
     InsufficientWeight = 7,
+    InvalidTimeWindow = 8,
+    NotYetValid = 9,
+    Expired = 10,
+    Rejected = 11,
+    Replay = 12,
+    RequiredSignerMissing = 13,
+    InvalidContext = 14,
 }
 
 #[contracttype]
@@ -44,14 +51,27 @@ pub struct Ed25519Signature {
 #[contracttype]
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct PolicyConfig {
-    pub admin: soroban_sdk::Address,
+    pub admin: Address,
     pub signers: Vec<Ed25519Signer>,
     pub threshold: u32,
+    pub controls: PolicyControls,
+}
+
+#[contracttype]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct PolicyControls {
+    pub valid_from_ledger: u32,
+    pub expires_at_ledger: u32,
+    pub reject_all: bool,
+    pub additional_signer: Option<BytesN<32>>,
+    pub required_contract: Option<Address>,
+    pub required_function: Option<Symbol>,
 }
 
 #[contracttype]
 enum DataKey {
     Config,
+    UsedPayload(BytesN<32>),
 }
 
 #[contract]
@@ -85,6 +105,55 @@ fn read_config(env: &Env) -> Result<PolicyConfig, PolicyError> {
         .ok_or(PolicyError::NotInitialized)
 }
 
+fn default_controls() -> PolicyControls {
+    PolicyControls {
+        valid_from_ledger: 0,
+        expires_at_ledger: u32::MAX,
+        reject_all: false,
+        additional_signer: None,
+        required_contract: None,
+        required_function: None,
+    }
+}
+
+fn validate_controls(controls: &PolicyControls) -> Result<(), PolicyError> {
+    if controls.valid_from_ledger > controls.expires_at_ledger {
+        return Err(PolicyError::InvalidTimeWindow);
+    }
+    if controls.required_contract.is_some() != controls.required_function.is_some() {
+        return Err(PolicyError::InvalidContext);
+    }
+    Ok(())
+}
+
+fn validate_contexts(
+    contexts: &Vec<Context>,
+    controls: &PolicyControls,
+) -> Result<(), PolicyError> {
+    if contexts.is_empty() {
+        return Err(PolicyError::InvalidContext);
+    }
+    for context in contexts.iter() {
+        if !matches!(context, Context::Contract(_)) {
+            return Err(PolicyError::InvalidContext);
+        }
+    }
+    if let (Some(required_contract), Some(required_function)) =
+        (&controls.required_contract, &controls.required_function)
+    {
+        if contexts.len() != 1 {
+            return Err(PolicyError::InvalidContext);
+        }
+        match contexts.get(0).unwrap() {
+            Context::Contract(context)
+                if context.contract == *required_contract
+                    && context.fn_name == *required_function => {}
+            _ => return Err(PolicyError::InvalidContext),
+        }
+    }
+    Ok(())
+}
+
 fn signer_weight(config: &PolicyConfig, public_key: &BytesN<32>) -> Option<u32> {
     config
         .signers
@@ -97,7 +166,7 @@ fn signer_weight(config: &PolicyConfig, public_key: &BytesN<32>) -> Option<u32> 
 impl PolicyAccountFixture {
     pub fn initialize(
         env: Env,
-        admin: soroban_sdk::Address,
+        admin: Address,
         signers: Vec<Ed25519Signer>,
         threshold: u32,
     ) -> Result<(), PolicyError> {
@@ -112,6 +181,7 @@ impl PolicyAccountFixture {
                 admin,
                 signers,
                 threshold,
+                controls: default_controls(),
             },
         );
         Ok(())
@@ -127,6 +197,15 @@ impl PolicyAccountFixture {
         config.admin.require_auth();
         config.signers = signers;
         config.threshold = threshold;
+        env.storage().instance().set(&DataKey::Config, &config);
+        Ok(())
+    }
+
+    pub fn set_controls(env: Env, controls: PolicyControls) -> Result<(), PolicyError> {
+        validate_controls(&controls)?;
+        let mut config = read_config(&env)?;
+        config.admin.require_auth();
+        config.controls = controls;
         env.storage().instance().set(&DataKey::Config, &config);
         Ok(())
     }
@@ -155,9 +234,25 @@ impl CustomAccountInterface for PolicyAccountFixture {
         env: Env,
         signature_payload: Hash<32>,
         signatures: Vec<Ed25519Signature>,
-        _auth_contexts: Vec<Context>,
+        auth_contexts: Vec<Context>,
     ) -> Result<(), PolicyError> {
         let config = read_config(&env)?;
+        let current_ledger = env.ledger().sequence();
+        if current_ledger < config.controls.valid_from_ledger {
+            return Err(PolicyError::NotYetValid);
+        }
+        if current_ledger > config.controls.expires_at_ledger {
+            return Err(PolicyError::Expired);
+        }
+        if config.controls.reject_all {
+            return Err(PolicyError::Rejected);
+        }
+        validate_contexts(&auth_contexts, &config.controls)?;
+        let payload_hash = signature_payload.to_bytes();
+        let used_key = DataKey::UsedPayload(payload_hash.clone());
+        if env.storage().temporary().has(&used_key) {
+            return Err(PolicyError::Replay);
+        }
         if signatures.is_empty() {
             return Err(PolicyError::MissingSignature);
         }
@@ -182,6 +277,12 @@ impl CustomAccountInterface for PolicyAccountFixture {
         if accepted_weight < config.threshold {
             return Err(PolicyError::InsufficientWeight);
         }
+        if let Some(required_signer) = config.controls.additional_signer
+            && !seen.contains(&required_signer)
+        {
+            return Err(PolicyError::RequiredSignerMissing);
+        }
+        env.storage().temporary().set(&used_key, &true);
         Ok(())
     }
 }
@@ -192,10 +293,15 @@ mod tests {
 
     use super::{
         Ed25519Signature, Ed25519Signer, PolicyAccountFixture, PolicyAccountFixtureClient,
-        PolicyError,
+        PolicyControls, PolicyError,
     };
     use ed25519_dalek::{Signer as _, SigningKey};
-    use soroban_sdk::{Address, BytesN, Env, IntoVal, Vec, testutils::Address as _, vec};
+    use soroban_sdk::{
+        Address, BytesN, Env, IntoVal, Symbol, Vec,
+        auth::{Context, ContractContext},
+        testutils::{Address as _, Ledger as _},
+        vec,
+    };
 
     fn key(seed: u8) -> SigningKey {
         SigningKey::from_bytes(&[seed; 32])
@@ -221,12 +327,45 @@ mod tests {
         payload: &[u8; 32],
         signatures: &Vec<Ed25519Signature>,
     ) -> Result<(), Result<PolicyError, soroban_sdk::InvokeError>> {
+        let contexts = contract_contexts(env, contract_id, "web_auth_verify");
+        check_with_contexts(env, contract_id, payload, signatures, &contexts)
+    }
+
+    fn contract_contexts(env: &Env, target: &Address, function: &str) -> Vec<Context> {
+        vec![
+            env,
+            Context::Contract(ContractContext {
+                contract: target.clone(),
+                fn_name: Symbol::new(env, function),
+                args: Vec::new(env),
+            }),
+        ]
+    }
+
+    fn check_with_contexts(
+        env: &Env,
+        contract_id: &Address,
+        payload: &[u8; 32],
+        signatures: &Vec<Ed25519Signature>,
+        contexts: &Vec<Context>,
+    ) -> Result<(), Result<PolicyError, soroban_sdk::InvokeError>> {
         env.try_invoke_contract_check_auth::<PolicyError>(
             contract_id,
             &BytesN::from_array(env, payload),
             signatures.clone().into_val(env),
-            &vec![env],
+            contexts,
         )
+    }
+
+    fn controls() -> PolicyControls {
+        PolicyControls {
+            valid_from_ledger: 0,
+            expires_at_ledger: u32::MAX,
+            reject_all: false,
+            additional_signer: None,
+            required_contract: None,
+            required_function: None,
+        }
     }
 
     #[test]
@@ -341,6 +480,174 @@ mod tests {
                 &vec![&env, signature_for_other_payload]
             )
             .is_err()
+        );
+    }
+
+    #[test]
+    fn successful_payload_cannot_be_replayed() {
+        let env = Env::default();
+        let first = key(1);
+        let signers = vec![&env, signer(&env, &first, 1)];
+        env.mock_all_auths();
+        let contract_id = env.register(PolicyAccountFixture, ());
+        let admin = Address::generate(&env);
+        PolicyAccountFixtureClient::new(&env, &contract_id).initialize(&admin, &signers, &1);
+        let payload = [4; 32];
+        let signatures = vec![&env, signature(&env, &first, &payload)];
+
+        assert_eq!(check(&env, &contract_id, &payload, &signatures), Ok(()));
+        assert_eq!(
+            check(&env, &contract_id, &payload, &signatures),
+            Err(Ok(PolicyError::Replay))
+        );
+    }
+
+    #[test]
+    fn time_bounds_and_intentional_rejection_are_exact() {
+        let env = Env::default();
+        env.ledger().set_sequence_number(100);
+        let first = key(1);
+        let signers = vec![&env, signer(&env, &first, 1)];
+        env.mock_all_auths();
+        let contract_id = env.register(PolicyAccountFixture, ());
+        let admin = Address::generate(&env);
+        let client = PolicyAccountFixtureClient::new(&env, &contract_id);
+        client.initialize(&admin, &signers, &1);
+        let mut policy = controls();
+        policy.valid_from_ledger = 101;
+        policy.expires_at_ledger = 102;
+        client.set_controls(&policy);
+
+        let early_payload = [10; 32];
+        assert_eq!(
+            check(
+                &env,
+                &contract_id,
+                &early_payload,
+                &vec![&env, signature(&env, &first, &early_payload)]
+            ),
+            Err(Ok(PolicyError::NotYetValid))
+        );
+
+        env.ledger().set_sequence_number(101);
+        let boundary_payload = [11; 32];
+        assert_eq!(
+            check(
+                &env,
+                &contract_id,
+                &boundary_payload,
+                &vec![&env, signature(&env, &first, &boundary_payload)]
+            ),
+            Ok(())
+        );
+
+        env.ledger().set_sequence_number(103);
+        let expired_payload = [12; 32];
+        assert_eq!(
+            check(
+                &env,
+                &contract_id,
+                &expired_payload,
+                &vec![&env, signature(&env, &first, &expired_payload)]
+            ),
+            Err(Ok(PolicyError::Expired))
+        );
+
+        policy.valid_from_ledger = 0;
+        policy.expires_at_ledger = u32::MAX;
+        policy.reject_all = true;
+        client.set_controls(&policy);
+        let rejected_payload = [13; 32];
+        assert_eq!(
+            check(
+                &env,
+                &contract_id,
+                &rejected_payload,
+                &vec![&env, signature(&env, &first, &rejected_payload)]
+            ),
+            Err(Ok(PolicyError::Rejected))
+        );
+    }
+
+    #[test]
+    fn additional_signer_is_required_beyond_threshold() {
+        let env = Env::default();
+        let first = key(1);
+        let second = key(2);
+        let signers = vec![&env, signer(&env, &first, 1), signer(&env, &second, 1)];
+        env.mock_all_auths();
+        let contract_id = env.register(PolicyAccountFixture, ());
+        let admin = Address::generate(&env);
+        let client = PolicyAccountFixtureClient::new(&env, &contract_id);
+        client.initialize(&admin, &signers, &1);
+        let mut policy = controls();
+        policy.additional_signer =
+            Some(BytesN::from_array(&env, second.verifying_key().as_bytes()));
+        client.set_controls(&policy);
+        let payload = [14; 32];
+        let first_signature = signature(&env, &first, &payload);
+
+        assert_eq!(
+            check(
+                &env,
+                &contract_id,
+                &payload,
+                &vec![&env, first_signature.clone()]
+            ),
+            Err(Ok(PolicyError::RequiredSignerMissing))
+        );
+        assert_eq!(
+            check(
+                &env,
+                &contract_id,
+                &payload,
+                &vec![&env, first_signature, signature(&env, &second, &payload)]
+            ),
+            Ok(())
+        );
+    }
+
+    #[test]
+    fn exact_contract_context_can_be_required() {
+        let env = Env::default();
+        let first = key(1);
+        let signers = vec![&env, signer(&env, &first, 1)];
+        env.mock_all_auths();
+        let contract_id = env.register(PolicyAccountFixture, ());
+        let target = Address::generate(&env);
+        let admin = Address::generate(&env);
+        let client = PolicyAccountFixtureClient::new(&env, &contract_id);
+        client.initialize(&admin, &signers, &1);
+        let mut policy = controls();
+        policy.required_contract = Some(target.clone());
+        policy.required_function = Some(Symbol::new(&env, "web_auth_verify"));
+        client.set_controls(&policy);
+        let payload = [15; 32];
+        let signatures = vec![&env, signature(&env, &first, &payload)];
+
+        assert_eq!(
+            check_with_contexts(&env, &contract_id, &payload, &signatures, &Vec::new(&env)),
+            Err(Ok(PolicyError::InvalidContext))
+        );
+        assert_eq!(
+            check_with_contexts(
+                &env,
+                &contract_id,
+                &payload,
+                &signatures,
+                &contract_contexts(&env, &target, "wrong_function")
+            ),
+            Err(Ok(PolicyError::InvalidContext))
+        );
+        assert_eq!(
+            check_with_contexts(
+                &env,
+                &contract_id,
+                &payload,
+                &signatures,
+                &contract_contexts(&env, &target, "web_auth_verify")
+            ),
+            Ok(())
         );
     }
 }
