@@ -1,6 +1,7 @@
 #![no_std]
 #![allow(clippy::missing_errors_doc, clippy::needless_pass_by_value)]
 
+mod evidence_id;
 mod storage;
 mod validation;
 
