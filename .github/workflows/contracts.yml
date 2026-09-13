@@ -18,7 +18,7 @@ jobs:
     timeout-minutes: 45
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - uses: Swatinem/rust-cache@779680da3a8892f488a7ff267b26f128a2f5dc9a # v2.8.2
+      - uses: Swatinem/rust-cache@401aff9a7a08acb9d27b64936a90db81024cff97 # v2.8.2
       - run: rustup show
       - run: cargo fmt --all -- --check
       - run: cargo clippy --locked --workspace --all-targets -- -D warnings
@@ -41,7 +41,7 @@ jobs:
     timeout-minutes: 60
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - uses: Swatinem/rust-cache@779680da3a8892f488a7ff267b26f128a2f5dc9a # v2.8.2
+      - uses: Swatinem/rust-cache@401aff9a7a08acb9d27b64936a90db81024cff97 # v2.8.2
       - run: cargo install --locked stellar-cli --version 27.1.0
       - run: bash scripts/build-reproducible.sh
       - run: bash scripts/build-reproducible.sh artifacts/repeat-wasm
