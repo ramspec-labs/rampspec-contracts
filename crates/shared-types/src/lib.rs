@@ -3,6 +3,7 @@
 use soroban_sdk::{Address, BytesN, contracterror, contracttype};
 
 pub const SCHEMA_VERSION: u32 = 1;
+pub const STORAGE_LAYOUT_VERSION: u32 = 1;
 pub const MAX_SCORE_BPS: u32 = 10_000;
 pub const EVIDENCE_ID_DOMAIN: &[u8; 20] = b"rampspec-evidence-v1";
 
@@ -111,12 +112,17 @@ pub struct AttestorRecord {
 
 #[contracttype]
 #[derive(Clone)]
-pub enum StorageKey {
+pub enum InstanceKeyV1 {
     Admin,
     PendingAdmin,
     Paused,
     SchemaVersion,
     CurrentWasmHash,
+}
+
+#[contracttype]
+#[derive(Clone)]
+pub enum PersistentKeyV1 {
     Attestor(Address),
     Evidence(BytesN<32>),
     ActiveReport(Address, BytesN<32>, NetworkKind),
@@ -153,8 +159,27 @@ mod tests {
     #[test]
     fn documented_boundaries_are_stable() {
         assert_eq!(SCHEMA_VERSION, 1);
+        assert_eq!(STORAGE_LAYOUT_VERSION, 1);
         assert_eq!(MAX_SCORE_BPS, 10_000);
         assert_eq!(EVIDENCE_ID_DOMAIN, b"rampspec-evidence-v1");
+    }
+
+    #[test]
+    fn storage_key_encodings_are_distinct() {
+        let env = Env::default();
+        let instance_keys = [
+            InstanceKeyV1::Admin.to_xdr(&env),
+            InstanceKeyV1::PendingAdmin.to_xdr(&env),
+            InstanceKeyV1::Paused.to_xdr(&env),
+            InstanceKeyV1::SchemaVersion.to_xdr(&env),
+            InstanceKeyV1::CurrentWasmHash.to_xdr(&env),
+        ];
+
+        for (index, key) in instance_keys.iter().enumerate() {
+            for other in instance_keys.iter().skip(index + 1) {
+                assert_ne!(key, other);
+            }
+        }
     }
 
     #[test]

@@ -1,5 +1,7 @@
 #![no_std]
 
+mod storage;
+
 use soroban_sdk::{Env, contract, contractimpl};
 
 #[contract]
