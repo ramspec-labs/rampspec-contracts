@@ -32,7 +32,9 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: Swatinem/rust-cache@779680da3a8892f488a7ff267b26f128a2f5dc9a # v2.8.2
       - run: cargo install --locked stellar-cli --version 27.1.0
-      - run: stellar contract build --locked --out-dir artifacts/wasm
+      - run: bash scripts/build-reproducible.sh
+      - run: bash scripts/build-reproducible.sh artifacts/repeat-wasm
+      - run: diff -u artifacts/wasm/checksums.sha256 artifacts/repeat-wasm/checksums.sha256
       - run: |
           if [ -f scripts/verify-generated.sh ]; then bash scripts/verify-generated.sh; fi
           if [ -f fuzz/Cargo.toml ]; then cargo check --manifest-path fuzz/Cargo.toml --all-targets; fi
@@ -41,4 +43,3 @@ jobs:
           name: contract-wasm-${{ github.sha }}
           path: artifacts/wasm/*.wasm
           if-no-files-found: error
-

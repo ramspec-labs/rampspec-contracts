@@ -2,6 +2,7 @@
 /.stellar/
 *.wasm
 *.wasm.sha256
+/artifacts/reproducibility/
 .env
 .env.*
 !.env.example
