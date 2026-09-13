@@ -1,0 +1,21 @@
+[package]
+name = "web-auth-fixture"
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+version.workspace = true
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+rampspec-shared-types = { path = "../../crates/shared-types" }
+soroban-sdk.workspace = true
+
+[dev-dependencies]
+rampspec-test-support = { path = "../../crates/test-support" }
+soroban-sdk = { workspace = true, features = ["testutils"] }
+
+[lints]
+workspace = true
+
