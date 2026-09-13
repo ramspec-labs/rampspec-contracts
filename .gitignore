@@ -10,6 +10,7 @@ contracts/*/test_snapshots/
 /artifacts/wasm/
 /deployments/local/runtime/
 /deployments/testnet/runtime/
+/artifacts/upgrade-rehearsals/
 .env
 .env.*
 !.env.example

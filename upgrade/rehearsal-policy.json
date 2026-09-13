@@ -1,0 +1,15 @@
+{
+  "schemaVersion": 1,
+  "allowedEnvironments": ["local", "testnet"],
+  "requiredChecks": [
+    "format", "clippy", "tests", "reproducibility", "generatedArtifacts",
+    "resourceBudgets", "manifestOffline", "manifestLive", "oldEvidenceRead",
+    "newEvidenceWrite", "eventReindex"
+  ],
+  "recoveryDecisions": {
+    "integrityFailure": "stop",
+    "oldEvidenceUnreadable": "rollback",
+    "oldEvidenceReadableButNewWriteFails": "forward-fix",
+    "allChecksPass": "accept"
+  }
+}

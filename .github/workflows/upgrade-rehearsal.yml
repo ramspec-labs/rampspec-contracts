@@ -1,0 +1,17 @@
+name: Upgrade rehearsal
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  preflight:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: Swatinem/rust-cache@779680da3a8892f488a7ff267b26f128a2f5dc9a # v2.8.2
+      - run: cargo install --locked stellar-cli --version 27.1.0
+      - run: node scripts/rehearse-upgrade.mjs --preflight-only
