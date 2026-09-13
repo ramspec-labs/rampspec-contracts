@@ -38,6 +38,7 @@ jobs:
       - run: bash scripts/build-reproducible.sh artifacts/repeat-wasm
       - run: diff -u artifacts/wasm/checksums.sha256 artifacts/repeat-wasm/checksums.sha256
       - run: node scripts/verify-fixture-isolation.mjs artifacts/wasm
+      - run: node scripts/verify-resource-budgets.mjs artifacts/wasm
       - run: |
           if [ -f scripts/verify-generated.sh ]; then bash scripts/verify-generated.sh; fi
           if [ -f fuzz/Cargo.toml ]; then

@@ -1,0 +1,55 @@
+{
+  "schemaVersion": 1,
+  "sdk": "27.0.0",
+  "measurement": "native-test upper bounds; release simulation required",
+  "regressionTolerancePercent": 15,
+  "contracts": {
+    "evidence_registry.wasm": {
+      "accept_admin": { "cpuMax": 15000000, "memoryMax": 12000000, "storageWritesMax": 2, "eventsMax": 1, "ttl": "instance" },
+      "get_attestor": { "cpuMax": 5000000, "memoryMax": 5000000, "storageWritesMax": 0, "eventsMax": 0, "ttl": "none" },
+      "get_evidence": { "cpuMax": 5000000, "memoryMax": 5000000, "storageWritesMax": 0, "eventsMax": 0, "ttl": "none" },
+      "initialize": { "cpuMax": 15000000, "memoryMax": 12000000, "storageWritesMax": 4, "eventsMax": 1, "ttl": "instance" },
+      "is_active": { "cpuMax": 5000000, "memoryMax": 5000000, "storageWritesMax": 0, "eventsMax": 0, "ttl": "none" },
+      "maintain_attestor": { "cpuMax": 10000000, "memoryMax": 8000000, "storageWritesMax": 0, "eventsMax": 0, "ttl": "persistent" },
+      "maintain_evidence": { "cpuMax": 10000000, "memoryMax": 8000000, "storageWritesMax": 0, "eventsMax": 0, "ttl": "persistent" },
+      "propose_admin": { "cpuMax": 15000000, "memoryMax": 12000000, "storageWritesMax": 1, "eventsMax": 1, "ttl": "instance" },
+      "publish_evidence": { "cpuMax": 20000000, "memoryMax": 16000000, "storageWritesMax": 2, "eventsMax": 1, "ttl": "persistent" },
+      "register_attestor": { "cpuMax": 15000000, "memoryMax": 12000000, "storageWritesMax": 1, "eventsMax": 1, "ttl": "persistent" },
+      "revoke_evidence": { "cpuMax": 20000000, "memoryMax": 16000000, "storageWritesMax": 2, "eventsMax": 1, "ttl": "persistent" },
+      "schema_version": { "cpuMax": 2000000, "memoryMax": 2000000, "storageWritesMax": 0, "eventsMax": 0, "ttl": "none" },
+      "set_attestor_enabled": { "cpuMax": 15000000, "memoryMax": 12000000, "storageWritesMax": 1, "eventsMax": 1, "ttl": "persistent" },
+      "set_paused": { "cpuMax": 10000000, "memoryMax": 8000000, "storageWritesMax": 1, "eventsMax": 1, "ttl": "instance" },
+      "supersede_evidence": { "cpuMax": 30000000, "memoryMax": 24000000, "storageWritesMax": 5, "eventsMax": 2, "ttl": "persistent" },
+      "upgrade": { "cpuMax": 15000000, "memoryMax": 12000000, "storageWritesMax": 1, "eventsMax": 1, "ttl": "instance" }
+    },
+    "policy_account_fixture.wasm": {
+      "__check_auth": { "cpuMax": 30000000, "memoryMax": 24000000, "storageWritesMax": 1, "eventsMax": 0, "ttl": "temporary" },
+      "config": { "cpuMax": 5000000, "memoryMax": 5000000, "storageWritesMax": 0, "eventsMax": 0, "ttl": "none" },
+      "initialize": { "cpuMax": 15000000, "memoryMax": 12000000, "storageWritesMax": 1, "eventsMax": 0, "ttl": "instance" },
+      "is_test_only": { "cpuMax": 2000000, "memoryMax": 2000000, "storageWritesMax": 0, "eventsMax": 0, "ttl": "none" },
+      "passkey_supported": { "cpuMax": 2000000, "memoryMax": 2000000, "storageWritesMax": 0, "eventsMax": 0, "ttl": "none" },
+      "schema_version": { "cpuMax": 2000000, "memoryMax": 2000000, "storageWritesMax": 0, "eventsMax": 0, "ttl": "none" },
+      "set_controls": { "cpuMax": 15000000, "memoryMax": 12000000, "storageWritesMax": 1, "eventsMax": 0, "ttl": "instance" },
+      "set_passkeys": { "cpuMax": 20000000, "memoryMax": 16000000, "storageWritesMax": 1, "eventsMax": 0, "ttl": "instance" },
+      "set_signers": { "cpuMax": 20000000, "memoryMax": 16000000, "storageWritesMax": 1, "eventsMax": 0, "ttl": "instance" }
+    },
+    "web_auth_fixture.wasm": {
+      "config": { "cpuMax": 5000000, "memoryMax": 5000000, "storageWritesMax": 0, "eventsMax": 0, "ttl": "none" },
+      "configure": { "cpuMax": 15000000, "memoryMax": 12000000, "storageWritesMax": 1, "eventsMax": 1, "ttl": "instance" },
+      "initialize": { "cpuMax": 15000000, "memoryMax": 12000000, "storageWritesMax": 1, "eventsMax": 1, "ttl": "instance" },
+      "is_nonce_consumed": { "cpuMax": 5000000, "memoryMax": 5000000, "storageWritesMax": 0, "eventsMax": 0, "ttl": "none" },
+      "is_test_only": { "cpuMax": 2000000, "memoryMax": 2000000, "storageWritesMax": 0, "eventsMax": 0, "ttl": "none" },
+      "reset_nonce": { "cpuMax": 15000000, "memoryMax": 12000000, "storageWritesMax": 1, "eventsMax": 1, "ttl": "temporary" },
+      "schema_version": { "cpuMax": 2000000, "memoryMax": 2000000, "storageWritesMax": 0, "eventsMax": 0, "ttl": "none" },
+      "sep_version": { "cpuMax": 2000000, "memoryMax": 2000000, "storageWritesMax": 0, "eventsMax": 0, "ttl": "none" },
+      "web_auth_verify": { "cpuMax": 20000000, "memoryMax": 16000000, "storageWritesMax": 1, "eventsMax": 1, "ttl": "temporary" }
+    }
+  },
+  "growthModel": {
+    "evidencePersistentEntriesPerPublication": 2,
+    "additionalEntriesPerSupersession": 3,
+    "attestorPersistentEntries": 1,
+    "maintenanceTransactionsPerLiveEntryPerTtlWindow": 1,
+    "costInputsRequiredBeforePubnet": ["live entry count", "network fee rates", "target retention ledgers"]
+  }
+}

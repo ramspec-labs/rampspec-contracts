@@ -399,7 +399,10 @@ mod tests {
         let values = args(&env, &account, &server, Some(&client_domain), "nonce");
         let client = WebAuthFixtureClient::new(&env, &contract_id);
 
+        env.cost_estimate().budget().reset_tracker();
         client.web_auth_verify(&values);
+        assert!(env.cost_estimate().budget().cpu_instruction_cost() <= 20_000_000);
+        assert!(env.cost_estimate().budget().memory_bytes_cost() <= 16_000_000);
 
         let auths = env.auths();
         assert_eq!(auths.len(), 3);

@@ -847,6 +847,7 @@ mod tests {
         assert!(client.passkey_supported());
         let payload = [16; 32];
 
+        env.cost_estimate().budget().reset_tracker();
         assert_eq!(
             check(
                 &env,
@@ -856,6 +857,8 @@ mod tests {
             ),
             Ok(())
         );
+        assert!(env.cost_estimate().budget().cpu_instruction_cost() <= 30_000_000);
+        assert!(env.cost_estimate().budget().memory_bytes_cost() <= 24_000_000);
     }
 
     #[test]
