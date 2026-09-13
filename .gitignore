@@ -13,6 +13,7 @@ contracts/*/test_snapshots/
 /artifacts/upgrade-rehearsals/
 /artifacts/security-review/
 /artifacts/releases/
+/artifacts/operations/
 .env
 .env.*
 !.env.example

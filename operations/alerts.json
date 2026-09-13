@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "delivery": "github-actions-failure",
+  "alerts": [
+    { "id": "instance-ttl-critical", "signal": "instance TTL below 14 days", "severity": "critical", "owner": "contract-operator", "responseMinutes": 30, "runbook": "docs/operations.md#ttl-and-recovery" },
+    { "id": "persistent-ttl-warning", "signal": "evidence or attestor TTL below 45 days", "severity": "warning", "owner": "contract-operator", "responseMinutes": 1440, "runbook": "docs/operations.md#ttl-and-recovery" },
+    { "id": "event-index-gap", "signal": "RPC and indexed event cursors diverge", "severity": "critical", "owner": "backend-operator", "responseMinutes": 30, "runbook": "docs/operations.md#event-index-recovery" },
+    { "id": "contract-code-drift", "signal": "live WASM or schema differs from manifest", "severity": "critical", "owner": "security-owner", "responseMinutes": 15, "runbook": "docs/operations.md#incident-response" },
+    { "id": "privileged-change", "signal": "unexpected admin, attestor, pause, or upgrade event", "severity": "critical", "owner": "security-owner", "responseMinutes": 15, "runbook": "docs/operations.md#incident-response" },
+    { "id": "budget-regression", "signal": "resource baseline or transaction cost ceiling exceeded", "severity": "warning", "owner": "contracts-maintainer", "responseMinutes": 1440, "runbook": "docs/operations.md#cost-and-resource-budgets" },
+    { "id": "dependency-advisory", "signal": "moderate-or-higher dependency advisory", "severity": "warning", "owner": "security-owner", "responseMinutes": 1440, "runbook": "docs/operations.md#dependency-and-toolchain-updates" }
+  ]
+}

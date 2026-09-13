@@ -58,7 +58,7 @@ for (const [contractName, wasmName] of contracts) {
     test: "npm run build && node test/smoke.mjs",
   };
   packageJson.dependencies = {
-    "@stellar/stellar-sdk": "16.0.1",
+    "@stellar/stellar-sdk": "16.3.0",
     buffer: "6.0.3",
   };
   packageJson.devDependencies = { typescript: "5.6.2" };

@@ -1,0 +1,104 @@
+{
+  "schemaVersion": 1,
+  "deploymentState": "none",
+  "deploymentManifest": null,
+  "timezone": "UTC",
+  "tasks": [
+    {
+      "id": "ttl-maintenance",
+      "owner": "contract-operator",
+      "backup": "contracts-maintainer",
+      "frequencyDays": 30,
+      "trigger": "calendar",
+      "requiresDeployment": true,
+      "status": "blocked-no-deployment",
+      "lastCompletedAt": null,
+      "nextDueAt": null,
+      "evidence": null
+    },
+    {
+      "id": "event-index-integrity",
+      "owner": "backend-operator",
+      "backup": "contract-operator",
+      "frequencyDays": 1,
+      "trigger": "calendar",
+      "requiresDeployment": true,
+      "status": "blocked-no-deployment",
+      "lastCompletedAt": null,
+      "nextDueAt": null,
+      "evidence": null
+    },
+    {
+      "id": "privileged-access-review",
+      "owner": "security-owner",
+      "backup": "contracts-maintainer",
+      "frequencyDays": 90,
+      "trigger": "calendar",
+      "requiresDeployment": false,
+      "status": "scheduled",
+      "lastCompletedAt": null,
+      "nextDueAt": "2026-12-12T00:00:00.000Z",
+      "evidence": null
+    },
+    {
+      "id": "cost-and-budget-review",
+      "owner": "contract-operator",
+      "backup": "finance-owner",
+      "frequencyDays": 30,
+      "trigger": "calendar",
+      "requiresDeployment": true,
+      "status": "blocked-no-deployment",
+      "lastCompletedAt": null,
+      "nextDueAt": null,
+      "evidence": null
+    },
+    {
+      "id": "dependency-and-toolchain-review",
+      "owner": "contracts-maintainer",
+      "backup": "security-owner",
+      "frequencyDays": 7,
+      "trigger": "calendar",
+      "requiresDeployment": false,
+      "status": "scheduled",
+      "lastCompletedAt": "2026-09-13T00:00:00.000Z",
+      "nextDueAt": "2026-09-20T00:00:00.000Z",
+      "evidence": "security/dependency-exceptions.json"
+    },
+    {
+      "id": "incident-recovery-drill",
+      "owner": "security-owner",
+      "backup": "contract-operator",
+      "frequencyDays": 90,
+      "trigger": "calendar",
+      "requiresDeployment": false,
+      "status": "scheduled",
+      "lastCompletedAt": null,
+      "nextDueAt": "2026-12-12T00:00:00.000Z",
+      "evidence": null
+    },
+    {
+      "id": "compatibility-review",
+      "owner": "contracts-maintainer",
+      "backup": "backend-owner",
+      "frequencyDays": 90,
+      "trigger": "calendar-and-release",
+      "requiresDeployment": false,
+      "status": "scheduled",
+      "lastCompletedAt": "2026-09-13T00:00:00.000Z",
+      "nextDueAt": "2026-12-12T00:00:00.000Z",
+      "evidence": "release/migration-notes.md"
+    },
+    {
+      "id": "pubnet-decision-review",
+      "owner": "governance-owner",
+      "backup": "security-owner",
+      "frequencyDays": 90,
+      "trigger": "calendar-and-gate-change",
+      "requiresDeployment": false,
+      "status": "scheduled",
+      "lastCompletedAt": "2026-09-13T00:00:00.000Z",
+      "nextDueAt": "2026-12-12T00:00:00.000Z",
+      "evidence": "deployments/pubnet/decision.json"
+    }
+  ]
+}

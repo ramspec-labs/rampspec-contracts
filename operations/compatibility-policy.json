@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "supportedStorageSchemas": [1],
+  "supportedManifestSchemas": [1],
+  "supportedReleaseLines": ["latest-signed-release"],
+  "upgradePolicy": "additive-only-with-rehearsal",
+  "breakingChangeRequirements": [
+    "new-major-version",
+    "new-contract-id",
+    "migration-plan",
+    "indexer-replay-plan",
+    "independent-security-review",
+    "consumer-notice"
+  ],
+  "fixturePolicy": "test-only-no-pubnet",
+  "reviewEvidence": "release/migration-notes.md"
+}

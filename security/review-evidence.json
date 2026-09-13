@@ -3,6 +3,7 @@
   "requiredPaths": [
     "Cargo.lock",
     "Cargo.toml",
+    ".cargo/audit.toml",
     "rust-toolchain.toml",
     "contracts/evidence-registry/src",
     "contracts/evidence-registry/tests",
@@ -40,8 +41,13 @@
     "scripts/release-core.mjs",
     "scripts/verify-release.mjs",
     "release",
+    "operations",
+    "docs/operations.md",
+    "scripts/operations-core.mjs",
+    "scripts/verify-operations.mjs",
     "SECURITY.md",
     "security/review-scope.md",
-    "security/threat-model.md"
+    "security/threat-model.md",
+    "security/dependency-exceptions.json"
   ]
 }

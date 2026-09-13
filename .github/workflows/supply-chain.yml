@@ -17,7 +17,7 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: Swatinem/rust-cache@779680da3a8892f488a7ff267b26f128a2f5dc9a # v2.8.2
-      - run: cargo install --locked cargo-audit --version 0.21.2
+      - run: cargo install --locked cargo-audit --version 0.22.2
       - run: cargo audit --deny warnings
 
   sbom:
@@ -33,4 +33,3 @@ jobs:
           name: contracts-sbom-${{ github.sha }}
           path: "**/*.cdx.json"
           if-no-files-found: error
-

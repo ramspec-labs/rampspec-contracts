@@ -31,8 +31,10 @@ jobs:
       - run: node --test scripts/security-readiness-core.test.mjs
       - run: node --test scripts/release-core.test.mjs
       - run: node --test scripts/pubnet-decision-core.test.mjs
+      - run: node --test scripts/operations-core.test.mjs
       - run: node scripts/verify-security-readiness.mjs --allow-pending
       - run: node scripts/verify-pubnet-decision.mjs
+      - run: node scripts/verify-operations.mjs
 
   wasm:
     runs-on: ubuntu-latest

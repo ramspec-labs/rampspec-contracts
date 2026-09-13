@@ -12,6 +12,7 @@ This repository owns contract source, generated specifications and bindings, rep
 
 See [implementation.md](implementation.md) for the ordered delivery plan and [SECURITY.md](SECURITY.md) for responsible disclosure.
 Authentication fixture restrictions are defined in [docs/fixtures.md](docs/fixtures.md) and enforced from [fixtures/manifest.json](fixtures/manifest.json).
+Recurring maintenance, alert, incident, and compatibility controls are defined in [docs/operations.md](docs/operations.md).
 
 ## License
 
