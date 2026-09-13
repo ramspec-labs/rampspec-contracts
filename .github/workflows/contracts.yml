@@ -1,0 +1,44 @@
+name: Contract quality
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  rust:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: Swatinem/rust-cache@779680da3a8892f488a7ff267b26f128a2f5dc9a # v2.8.2
+      - run: rustup show
+      - run: cargo fmt --all -- --check
+      - run: cargo clippy --locked --workspace --all-targets -- -D warnings
+      - run: cargo test --locked --workspace
+      - run: cargo metadata --locked --format-version 1 --no-deps
+
+  wasm:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: Swatinem/rust-cache@779680da3a8892f488a7ff267b26f128a2f5dc9a # v2.8.2
+      - run: cargo install --locked stellar-cli --version 27.1.0
+      - run: stellar contract build --locked --out-dir artifacts/wasm
+      - run: |
+          if [ -f scripts/verify-generated.sh ]; then bash scripts/verify-generated.sh; fi
+          if [ -f fuzz/Cargo.toml ]; then cargo check --manifest-path fuzz/Cargo.toml --all-targets; fi
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: contract-wasm-${{ github.sha }}
+          path: artifacts/wasm/*.wasm
+          if-no-files-found: error
+
