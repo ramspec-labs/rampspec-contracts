@@ -24,6 +24,8 @@ jobs:
       - run: cargo clippy --locked --workspace --all-targets -- -D warnings
       - run: cargo test --locked --workspace
       - run: cargo metadata --locked --format-version 1 --no-deps
+      - run: node --test scripts/fixture-manifest-core.test.mjs
+      - run: node scripts/validate-fixture-manifest.mjs
 
   wasm:
     runs-on: ubuntu-latest
@@ -35,6 +37,7 @@ jobs:
       - run: bash scripts/build-reproducible.sh
       - run: bash scripts/build-reproducible.sh artifacts/repeat-wasm
       - run: diff -u artifacts/wasm/checksums.sha256 artifacts/repeat-wasm/checksums.sha256
+      - run: node scripts/verify-fixture-isolation.mjs artifacts/wasm
       - run: |
           if [ -f scripts/verify-generated.sh ]; then bash scripts/verify-generated.sh; fi
           if [ -f fuzz/Cargo.toml ]; then

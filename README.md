@@ -11,6 +11,7 @@ This repository owns contract source, generated specifications and bindings, rep
 - `policy-account-fixture`: test-only contract-account authorization policies.
 
 See [implementation.md](implementation.md) for the ordered delivery plan and [SECURITY.md](SECURITY.md) for responsible disclosure.
+Authentication fixture restrictions are defined in [docs/fixtures.md](docs/fixtures.md) and enforced from [fixtures/manifest.json](fixtures/manifest.json).
 
 ## License
 

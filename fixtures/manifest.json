@@ -1,0 +1,23 @@
+{
+  "schemaVersion": 1,
+  "fixtures": [
+    {
+      "name": "web-auth-fixture",
+      "wasm": "web_auth_fixture.wasm",
+      "testOnly": true,
+      "productionUse": false,
+      "holdsFunds": false,
+      "allowedNetworks": ["local", "testnet"],
+      "adminRole": "web-auth-fixture-admin"
+    },
+    {
+      "name": "policy-account-fixture",
+      "wasm": "policy_account_fixture.wasm",
+      "testOnly": true,
+      "productionUse": false,
+      "holdsFunds": false,
+      "allowedNetworks": ["local", "testnet"],
+      "adminRole": "policy-account-fixture-admin"
+    }
+  ]
+}
