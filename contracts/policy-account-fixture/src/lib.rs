@@ -2,7 +2,8 @@
 #![allow(
     clippy::missing_errors_doc,
     clippy::needless_pass_by_value,
-    clippy::used_underscore_binding
+    clippy::used_underscore_binding,
+    clippy::large_enum_variant
 )]
 
 use soroban_sdk::{
@@ -32,6 +33,8 @@ pub enum PolicyError {
     Replay = 12,
     RequiredSignerMissing = 13,
     InvalidContext = 14,
+    WrongSignatureMode = 15,
+    InvalidPasskey = 16,
 }
 
 #[contracttype]
@@ -50,10 +53,43 @@ pub struct Ed25519Signature {
 
 #[contracttype]
 #[derive(Clone, Debug, Eq, PartialEq)]
+pub struct PasskeySigner {
+    pub public_key: BytesN<65>,
+    pub weight: u32,
+}
+
+#[contracttype]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct PasskeySignature {
+    pub public_key: BytesN<65>,
+    pub authenticator_data: Bytes,
+    pub client_data_hash: BytesN<32>,
+    pub challenge: BytesN<32>,
+    pub signature: BytesN<64>,
+}
+
+#[contracttype]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub enum AccountSignature {
+    Ed25519(Ed25519Signature),
+    Passkey(PasskeySignature),
+}
+
+#[contracttype]
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum SignatureMode {
+    Ed25519,
+    PasskeyCompatible,
+}
+
+#[contracttype]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub struct PolicyConfig {
     pub admin: Address,
     pub signers: Vec<Ed25519Signer>,
+    pub passkey_signers: Vec<PasskeySigner>,
     pub threshold: u32,
+    pub signature_mode: SignatureMode,
     pub controls: PolicyControls,
 }
 
@@ -85,6 +121,33 @@ fn validate_policy(signers: &Vec<Ed25519Signer>, threshold: u32) -> Result<(), P
     let mut seen = Vec::<BytesN<32>>::new(signers.env());
     for signer in signers.iter() {
         if signer.weight == 0 || seen.contains(&signer.public_key) {
+            return Err(PolicyError::InvalidPolicy);
+        }
+        seen.push_back(signer.public_key);
+        total_weight = total_weight
+            .checked_add(signer.weight)
+            .ok_or(PolicyError::InvalidPolicy)?;
+    }
+    if threshold > total_weight {
+        return Err(PolicyError::InvalidPolicy);
+    }
+    Ok(())
+}
+
+fn validate_passkey_policy(
+    signers: &Vec<PasskeySigner>,
+    threshold: u32,
+) -> Result<(), PolicyError> {
+    if signers.is_empty() || signers.len() > MAX_SIGNERS || threshold == 0 {
+        return Err(PolicyError::InvalidPolicy);
+    }
+    let mut total_weight = 0_u32;
+    let mut seen = Vec::<BytesN<65>>::new(signers.env());
+    for signer in signers.iter() {
+        if signer.weight == 0
+            || signer.public_key.get(0).unwrap() != 4
+            || seen.contains(&signer.public_key)
+        {
             return Err(PolicyError::InvalidPolicy);
         }
         seen.push_back(signer.public_key);
@@ -162,6 +225,14 @@ fn signer_weight(config: &PolicyConfig, public_key: &BytesN<32>) -> Option<u32> 
         .map(|signer| signer.weight)
 }
 
+fn passkey_signer_weight(config: &PolicyConfig, public_key: &BytesN<65>) -> Option<u32> {
+    config
+        .passkey_signers
+        .iter()
+        .find(|signer| signer.public_key == *public_key)
+        .map(|signer| signer.weight)
+}
+
 #[contractimpl]
 impl PolicyAccountFixture {
     pub fn initialize(
@@ -180,7 +251,9 @@ impl PolicyAccountFixture {
             &PolicyConfig {
                 admin,
                 signers,
+                passkey_signers: Vec::new(&env),
                 threshold,
+                signature_mode: SignatureMode::Ed25519,
                 controls: default_controls(),
             },
         );
@@ -196,7 +269,26 @@ impl PolicyAccountFixture {
         let mut config = read_config(&env)?;
         config.admin.require_auth();
         config.signers = signers;
+        config.passkey_signers = Vec::new(&env);
         config.threshold = threshold;
+        config.signature_mode = SignatureMode::Ed25519;
+        env.storage().instance().set(&DataKey::Config, &config);
+        Ok(())
+    }
+
+    pub fn set_passkeys(
+        env: Env,
+        signers: Vec<PasskeySigner>,
+        threshold: u32,
+    ) -> Result<(), PolicyError> {
+        validate_passkey_policy(&signers, threshold)?;
+        let mut config = read_config(&env)?;
+        config.admin.require_auth();
+        config.signers = Vec::new(&env);
+        config.passkey_signers = signers;
+        config.threshold = threshold;
+        config.signature_mode = SignatureMode::PasskeyCompatible;
+        config.controls.additional_signer = None;
         env.storage().instance().set(&DataKey::Config, &config);
         Ok(())
     }
@@ -223,17 +315,22 @@ impl PolicyAccountFixture {
     pub fn is_test_only(_env: Env) -> bool {
         true
     }
+
+    #[must_use]
+    pub fn passkey_supported(_env: Env) -> bool {
+        true
+    }
 }
 
 #[contractimpl]
 impl CustomAccountInterface for PolicyAccountFixture {
     type Error = PolicyError;
-    type Signature = Vec<Ed25519Signature>;
+    type Signature = Vec<AccountSignature>;
 
     fn __check_auth(
         env: Env,
         signature_payload: Hash<32>,
-        signatures: Vec<Ed25519Signature>,
+        signatures: Vec<AccountSignature>,
         auth_contexts: Vec<Context>,
     ) -> Result<(), PolicyError> {
         let config = read_config(&env)?;
@@ -257,30 +354,77 @@ impl CustomAccountInterface for PolicyAccountFixture {
             return Err(PolicyError::MissingSignature);
         }
 
-        let mut seen = Vec::<BytesN<32>>::new(&env);
-        let mut accepted_weight = 0_u32;
-        let message = Bytes::from_array(&env, &signature_payload.to_bytes().to_array());
-        for signature in signatures.iter() {
-            if seen.contains(&signature.public_key) {
-                return Err(PolicyError::DuplicateSigner);
+        match config.signature_mode {
+            SignatureMode::Ed25519 => {
+                let mut seen = Vec::<BytesN<32>>::new(&env);
+                let mut accepted_weight = 0_u32;
+                let message = Bytes::from_array(&env, &signature_payload.to_bytes().to_array());
+                for envelope in signatures.iter() {
+                    let AccountSignature::Ed25519(signature) = envelope else {
+                        return Err(PolicyError::WrongSignatureMode);
+                    };
+                    if seen.contains(&signature.public_key) {
+                        return Err(PolicyError::DuplicateSigner);
+                    }
+                    seen.push_back(signature.public_key.clone());
+                    let weight = signer_weight(&config, &signature.public_key)
+                        .ok_or(PolicyError::UnauthorizedSigner)?;
+                    env.crypto().ed25519_verify(
+                        &signature.public_key,
+                        &message,
+                        &signature.signature,
+                    );
+                    accepted_weight = accepted_weight
+                        .checked_add(weight)
+                        .ok_or(PolicyError::InsufficientWeight)?;
+                }
+                if accepted_weight < config.threshold {
+                    return Err(PolicyError::InsufficientWeight);
+                }
+                if let Some(required_signer) = config.controls.additional_signer
+                    && !seen.contains(&required_signer)
+                {
+                    return Err(PolicyError::RequiredSignerMissing);
+                }
             }
-            seen.push_back(signature.public_key.clone());
-            let weight = signer_weight(&config, &signature.public_key)
-                .ok_or(PolicyError::UnauthorizedSigner)?;
-            env.crypto()
-                .ed25519_verify(&signature.public_key, &message, &signature.signature);
-            accepted_weight = accepted_weight
-                .checked_add(weight)
-                .ok_or(PolicyError::InsufficientWeight)?;
-        }
-
-        if accepted_weight < config.threshold {
-            return Err(PolicyError::InsufficientWeight);
-        }
-        if let Some(required_signer) = config.controls.additional_signer
-            && !seen.contains(&required_signer)
-        {
-            return Err(PolicyError::RequiredSignerMissing);
+            SignatureMode::PasskeyCompatible => {
+                let mut seen = Vec::<BytesN<65>>::new(&env);
+                let mut accepted_weight = 0_u32;
+                for envelope in signatures.iter() {
+                    let AccountSignature::Passkey(signature) = envelope else {
+                        return Err(PolicyError::WrongSignatureMode);
+                    };
+                    if signature.challenge != payload_hash
+                        || signature.authenticator_data.len() < 37
+                        || signature.authenticator_data.len() > 512
+                    {
+                        return Err(PolicyError::InvalidPasskey);
+                    }
+                    if seen.contains(&signature.public_key) {
+                        return Err(PolicyError::DuplicateSigner);
+                    }
+                    seen.push_back(signature.public_key.clone());
+                    let weight = passkey_signer_weight(&config, &signature.public_key)
+                        .ok_or(PolicyError::UnauthorizedSigner)?;
+                    let mut signed_message = signature.authenticator_data.clone();
+                    signed_message.append(&Bytes::from_array(
+                        &env,
+                        &signature.client_data_hash.to_array(),
+                    ));
+                    let digest = env.crypto().sha256(&signed_message);
+                    env.crypto().secp256r1_verify(
+                        &signature.public_key,
+                        &digest,
+                        &signature.signature,
+                    );
+                    accepted_weight = accepted_weight
+                        .checked_add(weight)
+                        .ok_or(PolicyError::InsufficientWeight)?;
+                }
+                if accepted_weight < config.threshold {
+                    return Err(PolicyError::InsufficientWeight);
+                }
+            }
         }
         env.storage().temporary().set(&used_key, &true);
         Ok(())
@@ -292,12 +436,15 @@ mod tests {
     extern crate std;
 
     use super::{
-        Ed25519Signature, Ed25519Signer, PolicyAccountFixture, PolicyAccountFixtureClient,
-        PolicyControls, PolicyError,
+        AccountSignature, Ed25519Signature, Ed25519Signer, PasskeySignature, PasskeySigner,
+        PolicyAccountFixture, PolicyAccountFixtureClient, PolicyControls, PolicyError,
     };
     use ed25519_dalek::{Signer as _, SigningKey};
+    use p256::ecdsa::{
+        Signature as P256Signature, SigningKey as P256SigningKey, signature::hazmat::PrehashSigner,
+    };
     use soroban_sdk::{
-        Address, BytesN, Env, IntoVal, Symbol, Vec,
+        Address, Bytes, BytesN, Env, IntoVal, Symbol, Vec,
         auth::{Context, ContractContext},
         testutils::{Address as _, Ledger as _},
         vec,
@@ -314,18 +461,51 @@ mod tests {
         }
     }
 
-    fn signature(env: &Env, key: &SigningKey, payload: &[u8; 32]) -> Ed25519Signature {
-        Ed25519Signature {
+    fn signature(env: &Env, key: &SigningKey, payload: &[u8; 32]) -> AccountSignature {
+        AccountSignature::Ed25519(Ed25519Signature {
             public_key: BytesN::from_array(env, key.verifying_key().as_bytes()),
             signature: BytesN::from_array(env, &key.sign(payload).to_bytes()),
+        })
+    }
+
+    fn passkey_key(seed: u8) -> P256SigningKey {
+        P256SigningKey::from_bytes((&[seed; 32]).into()).unwrap()
+    }
+
+    fn passkey_signer(env: &Env, key: &P256SigningKey, weight: u32) -> PasskeySigner {
+        let encoded = key.verifying_key().to_encoded_point(false);
+        let public_key: [u8; 65] = encoded.as_bytes().try_into().unwrap();
+        PasskeySigner {
+            public_key: BytesN::from_array(env, &public_key),
+            weight,
         }
+    }
+
+    fn passkey_signature(env: &Env, key: &P256SigningKey, payload: &[u8; 32]) -> AccountSignature {
+        let authenticator_data = Bytes::from_array(env, &[0xA5; 37]);
+        let client_data_hash = [0xB6; 32];
+        let mut signed_message = authenticator_data.clone();
+        signed_message.append(&Bytes::from_array(env, &client_data_hash));
+        let digest = env.crypto().sha256(&signed_message).to_array();
+        let signature: P256Signature = key.sign_prehash(&digest).unwrap();
+        let signature = signature.normalize_s().unwrap_or(signature);
+        let signature_bytes: [u8; 64] = signature.to_bytes().into();
+        let encoded = key.verifying_key().to_encoded_point(false);
+        let public_key: [u8; 65] = encoded.as_bytes().try_into().unwrap();
+        AccountSignature::Passkey(PasskeySignature {
+            public_key: BytesN::from_array(env, &public_key),
+            authenticator_data,
+            client_data_hash: BytesN::from_array(env, &client_data_hash),
+            challenge: BytesN::from_array(env, payload),
+            signature: BytesN::from_array(env, &signature_bytes),
+        })
     }
 
     fn check(
         env: &Env,
         contract_id: &Address,
         payload: &[u8; 32],
-        signatures: &Vec<Ed25519Signature>,
+        signatures: &Vec<AccountSignature>,
     ) -> Result<(), Result<PolicyError, soroban_sdk::InvokeError>> {
         let contexts = contract_contexts(env, contract_id, "web_auth_verify");
         check_with_contexts(env, contract_id, payload, signatures, &contexts)
@@ -346,7 +526,7 @@ mod tests {
         env: &Env,
         contract_id: &Address,
         payload: &[u8; 32],
-        signatures: &Vec<Ed25519Signature>,
+        signatures: &Vec<AccountSignature>,
         contexts: &Vec<Context>,
     ) -> Result<(), Result<PolicyError, soroban_sdk::InvokeError>> {
         env.try_invoke_contract_check_auth::<PolicyError>(
@@ -648,6 +828,68 @@ mod tests {
                 &contract_contexts(&env, &target, "web_auth_verify")
             ),
             Ok(())
+        );
+    }
+
+    #[test]
+    fn passkey_compatible_mode_verifies_p256_assertions() {
+        let env = Env::default();
+        let bootstrap = key(1);
+        let bootstrap_signers = vec![&env, signer(&env, &bootstrap, 1)];
+        let passkey = passkey_key(3);
+        let passkeys = vec![&env, passkey_signer(&env, &passkey, 1)];
+        env.mock_all_auths();
+        let contract_id = env.register(PolicyAccountFixture, ());
+        let admin = Address::generate(&env);
+        let client = PolicyAccountFixtureClient::new(&env, &contract_id);
+        client.initialize(&admin, &bootstrap_signers, &1);
+        client.set_passkeys(&passkeys, &1);
+        assert!(client.passkey_supported());
+        let payload = [16; 32];
+
+        assert_eq!(
+            check(
+                &env,
+                &contract_id,
+                &payload,
+                &vec![&env, passkey_signature(&env, &passkey, &payload)]
+            ),
+            Ok(())
+        );
+    }
+
+    #[test]
+    fn passkey_mode_rejects_wrong_envelope_and_challenge() {
+        let env = Env::default();
+        let bootstrap = key(1);
+        let bootstrap_signers = vec![&env, signer(&env, &bootstrap, 1)];
+        let passkey = passkey_key(3);
+        let passkeys = vec![&env, passkey_signer(&env, &passkey, 1)];
+        env.mock_all_auths();
+        let contract_id = env.register(PolicyAccountFixture, ());
+        let admin = Address::generate(&env);
+        let client = PolicyAccountFixtureClient::new(&env, &contract_id);
+        client.initialize(&admin, &bootstrap_signers, &1);
+        client.set_passkeys(&passkeys, &1);
+        let payload = [17; 32];
+
+        assert_eq!(
+            check(
+                &env,
+                &contract_id,
+                &payload,
+                &vec![&env, signature(&env, &bootstrap, &payload)]
+            ),
+            Err(Ok(PolicyError::WrongSignatureMode))
+        );
+
+        let mut altered = passkey_signature(&env, &passkey, &payload);
+        if let AccountSignature::Passkey(assertion) = &mut altered {
+            assertion.challenge = BytesN::from_array(&env, &[18; 32]);
+        }
+        assert_eq!(
+            check(&env, &contract_id, &payload, &vec![&env, altered]),
+            Err(Ok(PolicyError::InvalidPasskey))
         );
     }
 }
