@@ -60,6 +60,14 @@ pub struct EvidenceSuperseded {
     pub authorizer: Address,
 }
 
+#[contractevent]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct PauseChanged {
+    #[topic]
+    pub admin: Address,
+    pub paused: bool,
+}
+
 #[contract]
 pub struct EvidenceRegistry;
 
@@ -145,6 +153,9 @@ impl EvidenceRegistry {
 
     pub fn publish_evidence(env: Env, input: EvidenceInput) -> Result<BytesN<32>, ContractError> {
         let schema_version = storage::schema_version(&env)?;
+        if storage::is_paused(&env)? {
+            return Err(ContractError::Paused);
+        }
         validation::validate_input(&input, None, schema_version)?;
         let attestor = storage::attestor(&env, &input.publisher)
             .ok_or(ContractError::AttestorNotRegistered)?;
@@ -250,6 +261,9 @@ impl EvidenceRegistry {
         authorizer: Address,
     ) -> Result<BytesN<32>, ContractError> {
         let schema_version = storage::schema_version(&env)?;
+        if storage::is_paused(&env)? {
+            return Err(ContractError::Paused);
+        }
         validation::validate_input(&replacement, Some(&old_id), schema_version)?;
         let mut old = storage::evidence(&env, &old_id).ok_or(ContractError::EvidenceNotFound)?;
         if old.status != EvidenceStatus::Active {
@@ -329,6 +343,17 @@ impl EvidenceRegistry {
         }
         .publish(&env);
         Ok(new_id)
+    }
+
+    pub fn set_paused(env: Env, paused: bool) -> Result<(), ContractError> {
+        let admin = storage::admin(&env)?;
+        admin.require_auth();
+        if storage::is_paused(&env)? == paused {
+            return Ok(());
+        }
+        storage::set_paused(&env, paused);
+        PauseChanged { admin, paused }.publish(&env);
+        Ok(())
     }
 }
 
@@ -833,5 +858,44 @@ mod tests {
             client.try_supersede_evidence(&old_id, &replacement, &publisher),
             Err(Ok(ContractError::InvalidSupersession))
         );
+    }
+
+    #[test]
+    fn pause_blocks_new_publication_and_replacement_but_not_reads_or_revocation() {
+        let (env, contract_id, admin) = setup();
+        let publisher = register_publisher(&env, &contract_id, &admin);
+        let client = EvidenceRegistryClient::new(&env, &contract_id);
+        let old_id = client.publish_evidence(&valid_input(&env, &publisher));
+        client.set_paused(&true);
+
+        let mut replacement = valid_input(&env, &publisher);
+        replacement.report_hash = BytesN::from_array(&env, &[48; 32]);
+        assert_eq!(
+            client.try_publish_evidence(&replacement),
+            Err(Ok(ContractError::Paused))
+        );
+        assert_eq!(
+            client.try_supersede_evidence(&old_id, &replacement, &publisher),
+            Err(Ok(ContractError::Paused))
+        );
+        assert!(client.get_evidence(&old_id).is_some());
+        client.revoke_evidence(&old_id, &BytesN::from_array(&env, &[31; 32]), &publisher);
+        assert!(!client.is_active(&old_id));
+    }
+
+    #[test]
+    fn pause_changes_are_admin_only_and_idempotent() {
+        let (env, contract_id, admin) = setup();
+        let client = EvidenceRegistryClient::new(&env, &contract_id);
+        client.initialize(&admin, &SCHEMA_VERSION);
+        client.set_paused(&true);
+        assert_eq!(env.events().all().events().len(), 1);
+        client.set_paused(&true);
+        assert_eq!(env.events().all().events().len(), 0);
+        client.set_paused(&false);
+        assert_eq!(env.events().all().events().len(), 1);
+
+        env.set_auths(&[]);
+        assert!(client.try_set_paused(&true).is_err());
     }
 }

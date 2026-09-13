@@ -1,5 +1,3 @@
-#![allow(dead_code)]
-
 use rampspec_shared_types::{
     AttestorRecord, ContractError, EvidenceRecord, InstanceKeyV1, NetworkKind, PersistentKeyV1,
 };
@@ -39,6 +37,12 @@ pub(crate) fn is_paused(env: &Env) -> Result<bool, ContractError> {
         .instance()
         .get(&InstanceKeyV1::Paused)
         .ok_or(ContractError::NotInitialized)
+}
+
+pub(crate) fn set_paused(env: &Env, paused: bool) {
+    let storage = env.storage().instance();
+    storage.set(&InstanceKeyV1::Paused, &paused);
+    storage.extend_ttl(103_680, 2_073_600);
 }
 
 pub(crate) fn attestor(env: &Env, address: &Address) -> Option<AttestorRecord> {
