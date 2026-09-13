@@ -9,6 +9,7 @@ contracts/*/test_snapshots/
 /artifacts/reproducibility/
 /artifacts/wasm/
 /deployments/local/runtime/
+/deployments/testnet/runtime/
 .env
 .env.*
 !.env.example
