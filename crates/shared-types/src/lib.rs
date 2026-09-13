@@ -1,6 +1,6 @@
 #![no_std]
 
-use soroban_sdk::{Address, BytesN, contracttype};
+use soroban_sdk::{Address, BytesN, contracterror, contracttype};
 
 pub const SCHEMA_VERSION: u32 = 1;
 pub const MAX_SCORE_BPS: u32 = 10_000;
@@ -8,6 +8,27 @@ pub const EVIDENCE_ID_DOMAIN: &[u8; 20] = b"rampspec-evidence-v1";
 
 pub type Hash32 = BytesN<32>;
 pub type EvidenceId = BytesN<32>;
+
+#[contracterror]
+#[derive(Copy, Clone, Debug, Eq, PartialEq)]
+#[repr(u32)]
+pub enum ContractError {
+    AlreadyInitialized = 1,
+    NotInitialized = 2,
+    Unauthorized = 3,
+    Paused = 4,
+    InvalidHash = 5,
+    InvalidCounts = 6,
+    InvalidScore = 7,
+    AttestorNotRegistered = 8,
+    AttestorDisabled = 9,
+    EvidenceAlreadyExists = 10,
+    EvidenceNotFound = 11,
+    EvidenceNotActive = 12,
+    InvalidSupersession = 13,
+    AdminProposalMissing = 14,
+    UpgradeNotAllowed = 15,
+}
 
 #[contracttype]
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -134,5 +155,30 @@ mod tests {
         assert_eq!(SCHEMA_VERSION, 1);
         assert_eq!(MAX_SCORE_BPS, 10_000);
         assert_eq!(EVIDENCE_ID_DOMAIN, b"rampspec-evidence-v1");
+    }
+
+    #[test]
+    fn error_codes_are_stable() {
+        let cases = [
+            (ContractError::AlreadyInitialized, 1),
+            (ContractError::NotInitialized, 2),
+            (ContractError::Unauthorized, 3),
+            (ContractError::Paused, 4),
+            (ContractError::InvalidHash, 5),
+            (ContractError::InvalidCounts, 6),
+            (ContractError::InvalidScore, 7),
+            (ContractError::AttestorNotRegistered, 8),
+            (ContractError::AttestorDisabled, 9),
+            (ContractError::EvidenceAlreadyExists, 10),
+            (ContractError::EvidenceNotFound, 11),
+            (ContractError::EvidenceNotActive, 12),
+            (ContractError::InvalidSupersession, 13),
+            (ContractError::AdminProposalMissing, 14),
+            (ContractError::UpgradeNotAllowed, 15),
+        ];
+
+        for (error, expected) in cases {
+            assert_eq!(error as u32, expected);
+        }
     }
 }
