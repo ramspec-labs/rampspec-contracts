@@ -5,6 +5,9 @@ use rampspec_shared_types::{
 };
 use soroban_sdk::{Address, BytesN, Env};
 
+const PERSISTENT_TTL_THRESHOLD: u32 = 518_400;
+const PERSISTENT_TTL_BUMP: u32 = 3_110_400;
+
 pub(crate) fn is_initialized(env: &Env) -> bool {
     env.storage().instance().has(&InstanceKeyV1::SchemaVersion)
 }
@@ -45,9 +48,10 @@ pub(crate) fn attestor(env: &Env, address: &Address) -> Option<AttestorRecord> {
 }
 
 pub(crate) fn set_attestor(env: &Env, record: &AttestorRecord) {
-    env.storage()
-        .persistent()
-        .set(&PersistentKeyV1::Attestor(record.attestor.clone()), record);
+    let key = PersistentKeyV1::Attestor(record.attestor.clone());
+    let storage = env.storage().persistent();
+    storage.set(&key, record);
+    storage.extend_ttl(&key, PERSISTENT_TTL_THRESHOLD, PERSISTENT_TTL_BUMP);
 }
 
 pub(crate) fn evidence(env: &Env, id: &BytesN<32>) -> Option<EvidenceRecord> {
@@ -57,7 +61,8 @@ pub(crate) fn evidence(env: &Env, id: &BytesN<32>) -> Option<EvidenceRecord> {
 }
 
 pub(crate) fn set_evidence(env: &Env, record: &EvidenceRecord) {
-    env.storage()
-        .persistent()
-        .set(&PersistentKeyV1::Evidence(record.id.clone()), record);
+    let key = PersistentKeyV1::Evidence(record.id.clone());
+    let storage = env.storage().persistent();
+    storage.set(&key, record);
+    storage.extend_ttl(&key, PERSISTENT_TTL_THRESHOLD, PERSISTENT_TTL_BUMP);
 }
