@@ -436,15 +436,26 @@ impl EvidenceRegistry {
         .publish(&env);
         Ok(())
     }
+
+    pub fn maintain_attestor(env: Env, attestor: Address) -> Result<(), ContractError> {
+        storage::admin(&env)?.require_auth();
+        storage::maintain_attestor(&env, &attestor)
+    }
+
+    pub fn maintain_evidence(env: Env, id: BytesN<32>) -> Result<(), ContractError> {
+        storage::admin(&env)?.require_auth();
+        storage::maintain_evidence(&env, &id)
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
     use base64::{Engine as _, engine::general_purpose::STANDARD};
-    use rampspec_shared_types::{InstanceKeyV1, NetworkKind};
+    use rampspec_shared_types::{InstanceKeyV1, NetworkKind, PersistentKeyV1};
     use soroban_sdk::{
         Address, Bytes, testutils::Address as _, testutils::Events as _, testutils::Ledger as _,
+        testutils::storage::Instance as _, testutils::storage::Persistent as _,
     };
 
     const UPGRADE_TARGET_BASE64: &str = "AGFzbQEAAAABFARgAX4BfmACf34AYAJ+fgF+YAAAAg0CAWkBMAAAAWkBXwAAAwYFAQIDAwMFAwEAEAYZA38BQYCAwAALfwBBgIDAAAt/AEGAgMAACwcvBQZtZW1vcnkCAANhZGQAAwFfAAYKX19kYXRhX2VuZAMBC19faGVhcF9iYXNlAwIKjAIFXQIBfwF+AkACQCABp0H/AXEiAkHAAEYNAAJAIAJBBkYNAEIBIQNCg5CAgIABIQEMAgsgAUIIiCEBQgAhAwwBC0IAIQMgARCAgICAACEBCyAAIAE3AwggACADNwMAC5kBAQF/I4CAgIAAQSBrIgIkgICAgAAgAkEQaiAAEIKAgIAAAkACQCACKAIQDQAgAikDGCEAIAIgARCCgICAACACKQMApw0AIAAgAikDCHwiASAAVA0BAkACQCABQv//////////AFYNACABQgiGQgaEIQAMAQsgARCBgICAACEACyACQSBqJICAgIAAIAAPCwAACxCEgICAAAALCQAQhYCAgAAACwQAAAALAgALAEsOY29udHJhY3RzcGVjdjAAAAAAAAAAAAAAAANhZGQAAAAAAgAAAAAAAAABYQAAAAAAAAYAAAAAAAAAAWIAAAAAAAAGAAAAAQAAAAYAHhFjb250cmFjdGVudm1ldGF2MAAAAAAAAAAVAAAAAAB7DmNvbnRyYWN0bWV0YXYwAAAAAAAAAAVyc3ZlcgAAAAAAAAYxLjc0LjAAAAAAAAAAAAAIcnNzZGt2ZXIAAAA5MjEuMC4xLXByZXZpZXcuMSMxMTZjMzViYzllMDNmNGIxYjVlNjViNWVlODMxYWUwZjg2YWE5MmZkAAAA";
@@ -1083,6 +1094,71 @@ mod tests {
             client
                 .try_upgrade(&BytesN::from_array(&env, &[62; 32]))
                 .is_err()
+        );
+    }
+
+    #[test]
+    fn maintenance_refreshes_near_expiry_entries() {
+        let (env, contract_id, admin) = setup();
+        let publisher = register_publisher(&env, &contract_id, &admin);
+        let client = EvidenceRegistryClient::new(&env, &contract_id);
+        let id = client.publish_evidence(&valid_input(&env, &publisher));
+        let initial_ttl = env.as_contract(&contract_id, || {
+            env.storage()
+                .persistent()
+                .get_ttl(&PersistentKeyV1::Evidence(id.clone()))
+        });
+        assert!(initial_ttl >= storage::PERSISTENT_TTL_TARGET - 1);
+
+        env.ledger().set_sequence_number(1_500_000);
+        env.as_contract(&contract_id, || storage::set_paused(&env, false));
+        env.ledger().set_sequence_number(2_600_000);
+        let near_expiry = env.as_contract(&contract_id, || {
+            env.storage()
+                .persistent()
+                .get_ttl(&PersistentKeyV1::Evidence(id.clone()))
+        });
+        assert!(near_expiry < storage::PERSISTENT_TTL_THRESHOLD);
+
+        client.maintain_evidence(&id);
+        client.maintain_attestor(&publisher);
+        let refreshed = env.as_contract(&contract_id, || {
+            (
+                env.storage()
+                    .persistent()
+                    .get_ttl(&PersistentKeyV1::Evidence(id.clone())),
+                env.storage().instance().get_ttl(),
+            )
+        });
+        assert!(refreshed.0 >= storage::PERSISTENT_TTL_TARGET - 1);
+        assert!(refreshed.1 >= storage::INSTANCE_TTL_TARGET - 1);
+    }
+
+    #[test]
+    fn maintenance_rejects_missing_and_archived_entries() {
+        let (env, contract_id, admin) = setup();
+        let publisher = register_publisher(&env, &contract_id, &admin);
+        let client = EvidenceRegistryClient::new(&env, &contract_id);
+        let id = client.publish_evidence(&valid_input(&env, &publisher));
+        let missing = BytesN::from_array(&env, &[93; 32]);
+        assert_eq!(
+            client.try_maintain_evidence(&missing),
+            Err(Ok(ContractError::EvidenceNotFound))
+        );
+        assert_eq!(
+            client.try_maintain_attestor(&Address::generate(&env)),
+            Err(Ok(ContractError::AttestorNotRegistered))
+        );
+
+        env.as_contract(&contract_id, || {
+            env.storage()
+                .persistent()
+                .remove(&PersistentKeyV1::Evidence(id.clone()));
+        });
+        assert_eq!(client.get_evidence(&id), None);
+        assert_eq!(
+            client.try_maintain_evidence(&id),
+            Err(Ok(ContractError::EvidenceNotFound))
         );
     }
 }
