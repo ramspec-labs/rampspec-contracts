@@ -3,6 +3,7 @@
 
 mod evidence_id;
 mod storage;
+mod supersession;
 mod validation;
 
 use rampspec_shared_types::{
@@ -277,6 +278,7 @@ impl EvidenceRegistry {
         if new_id == old_id {
             return Err(ContractError::InvalidSupersession);
         }
+        supersession::validate_link(&env, &old_id, &new_id)?;
         if storage::evidence(&env, &new_id).is_some()
             || storage::active_id(
                 &env,
@@ -776,6 +778,60 @@ mod tests {
         assert_eq!(
             client.get_evidence(&new_id).unwrap().publisher,
             second_attestor
+        );
+    }
+
+    #[test]
+    fn rejects_existing_reverse_and_overlong_supersession_links() {
+        let (env, contract_id, admin) = setup();
+        let publisher = register_publisher(&env, &contract_id, &admin);
+        let client = EvidenceRegistryClient::new(&env, &contract_id);
+        let old_id = client.publish_evidence(&valid_input(&env, &publisher));
+        let mut replacement = valid_input(&env, &publisher);
+        replacement.report_hash = BytesN::from_array(&env, &[46; 32]);
+        let new_id = evidence_id::derive(
+            &env,
+            &replacement.publisher,
+            &replacement.report_hash,
+            &replacement.network,
+        );
+        env.as_contract(&contract_id, || {
+            storage::set_superseded_by(&env, &new_id, &old_id);
+        });
+        assert_eq!(
+            client.try_supersede_evidence(&old_id, &replacement, &publisher),
+            Err(Ok(ContractError::InvalidSupersession))
+        );
+
+        env.as_contract(&contract_id, || {
+            let mut cursor = new_id.clone();
+            for byte in 100..126 {
+                let next = BytesN::from_array(&env, &[byte; 32]);
+                storage::set_superseded_by(&env, &cursor, &next);
+                cursor = next;
+            }
+        });
+        assert_eq!(
+            client.try_supersede_evidence(&old_id, &replacement, &publisher),
+            Err(Ok(ContractError::InvalidSupersession))
+        );
+        assert!(client.is_active(&old_id));
+    }
+
+    #[test]
+    fn rejects_a_second_forward_link_even_if_source_state_is_corrupt() {
+        let (env, contract_id, admin) = setup();
+        let publisher = register_publisher(&env, &contract_id, &admin);
+        let client = EvidenceRegistryClient::new(&env, &contract_id);
+        let old_id = client.publish_evidence(&valid_input(&env, &publisher));
+        env.as_contract(&contract_id, || {
+            storage::set_superseded_by(&env, &old_id, &BytesN::from_array(&env, &[88; 32]));
+        });
+        let mut replacement = valid_input(&env, &publisher);
+        replacement.report_hash = BytesN::from_array(&env, &[47; 32]);
+        assert_eq!(
+            client.try_supersede_evidence(&old_id, &replacement, &publisher),
+            Err(Ok(ContractError::InvalidSupersession))
         );
     }
 }
