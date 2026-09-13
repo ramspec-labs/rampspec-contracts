@@ -1,5 +1,3 @@
-#![allow(dead_code)]
-
 use rampspec_shared_types::{EVIDENCE_ID_DOMAIN, NetworkKind};
 use soroban_sdk::{Address, Bytes, BytesN, Env, xdr::ToXdr};
 

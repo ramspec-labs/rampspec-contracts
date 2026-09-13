@@ -5,7 +5,9 @@ mod evidence_id;
 mod storage;
 mod validation;
 
-use rampspec_shared_types::{AttestorRecord, ContractError, SCHEMA_VERSION};
+use rampspec_shared_types::{
+    AttestorRecord, ContractError, EvidenceInput, EvidenceRecord, EvidenceStatus, SCHEMA_VERSION,
+};
 use soroban_sdk::{Address, BytesN, Env, contract, contractevent, contractimpl};
 
 #[contractevent]
@@ -23,6 +25,18 @@ pub struct AttestorSet {
     pub attestor: Address,
     pub enabled: bool,
     pub metadata_hash: BytesN<32>,
+}
+
+#[contractevent]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct EvidencePublished {
+    #[topic]
+    pub id: BytesN<32>,
+    #[topic]
+    pub publisher: Address,
+    pub report_hash: BytesN<32>,
+    pub target_hash: BytesN<32>,
+    pub suite_hash: BytesN<32>,
 }
 
 #[contract]
@@ -107,12 +121,60 @@ impl EvidenceRegistry {
         .publish(&env);
         Ok(())
     }
+
+    pub fn publish_evidence(env: Env, input: EvidenceInput) -> Result<BytesN<32>, ContractError> {
+        let schema_version = storage::schema_version(&env)?;
+        validation::validate_input(&input, None, schema_version)?;
+        let attestor = storage::attestor(&env, &input.publisher)
+            .ok_or(ContractError::AttestorNotRegistered)?;
+        if !attestor.enabled {
+            return Err(ContractError::AttestorDisabled);
+        }
+        input.publisher.require_auth();
+
+        let id = evidence_id::derive(&env, &input.publisher, &input.report_hash, &input.network);
+        if storage::evidence(&env, &id).is_some() {
+            return Err(ContractError::EvidenceAlreadyExists);
+        }
+        let record = EvidenceRecord {
+            id: id.clone(),
+            publisher: input.publisher.clone(),
+            report_hash: input.report_hash.clone(),
+            target_hash: input.target_hash.clone(),
+            suite_hash: input.suite_hash.clone(),
+            specs_hash: input.specs_hash,
+            artifact_root: input.artifact_root,
+            network: input.network,
+            protocol_bitmap: input.protocol_bitmap,
+            score_bps: input.score_bps,
+            passed: input.passed,
+            failed: input.failed,
+            warnings: input.warnings,
+            skipped: input.skipped,
+            created_ledger: env.ledger().sequence(),
+            status: EvidenceStatus::Active,
+            supersedes: None,
+        };
+        storage::set_evidence(&env, &record);
+        EvidencePublished {
+            id: id.clone(),
+            publisher: record.publisher,
+            report_hash: record.report_hash,
+            target_hash: record.target_hash,
+            suite_hash: record.suite_hash,
+        }
+        .publish(&env);
+        Ok(id)
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use soroban_sdk::{Address, testutils::Address as _, testutils::Ledger as _};
+    use rampspec_shared_types::NetworkKind;
+    use soroban_sdk::{
+        Address, testutils::Address as _, testutils::Events as _, testutils::Ledger as _,
+    };
 
     fn setup() -> (Env, Address, Address) {
         let env = Env::default();
@@ -120,6 +182,32 @@ mod tests {
         let contract_id = env.register(EvidenceRegistry, ());
         let admin = Address::generate(&env);
         (env, contract_id, admin)
+    }
+
+    fn valid_input(env: &Env, publisher: &Address) -> EvidenceInput {
+        EvidenceInput {
+            publisher: publisher.clone(),
+            report_hash: BytesN::from_array(env, &[11; 32]),
+            target_hash: BytesN::from_array(env, &[12; 32]),
+            suite_hash: BytesN::from_array(env, &[13; 32]),
+            specs_hash: BytesN::from_array(env, &[14; 32]),
+            artifact_root: BytesN::from_array(env, &[15; 32]),
+            network: NetworkKind::Testnet,
+            protocol_bitmap: 1,
+            score_bps: 10_000,
+            passed: 1,
+            failed: 0,
+            warnings: 0,
+            skipped: 0,
+        }
+    }
+
+    fn register_publisher(env: &Env, contract_id: &Address, admin: &Address) -> Address {
+        let client = EvidenceRegistryClient::new(env, contract_id);
+        client.initialize(admin, &SCHEMA_VERSION);
+        let publisher = Address::generate(env);
+        client.register_attestor(&publisher, &BytesN::from_array(env, &[9; 32]));
+        publisher
     }
 
     #[test]
@@ -251,5 +339,74 @@ mod tests {
         client.register_attestor(&attestor, &metadata_hash);
         env.set_auths(&[]);
         assert!(client.try_set_attestor_enabled(&attestor, &false).is_err());
+    }
+
+    #[test]
+    fn publishes_an_active_immutable_record() {
+        let (env, contract_id, admin) = setup();
+        let publisher = register_publisher(&env, &contract_id, &admin);
+        let input = valid_input(&env, &publisher);
+        let id = EvidenceRegistryClient::new(&env, &contract_id).publish_evidence(&input);
+        assert_eq!(
+            env.events()
+                .all()
+                .filter_by_contract(&contract_id)
+                .events()
+                .len(),
+            1
+        );
+        let stored = env.as_contract(&contract_id, || storage::evidence(&env, &id).unwrap());
+
+        assert_eq!(stored.id, id);
+        assert_eq!(stored.publisher, publisher);
+        assert_eq!(stored.report_hash, input.report_hash);
+        assert_eq!(stored.status, EvidenceStatus::Active);
+        assert_eq!(stored.supersedes, None);
+    }
+
+    #[test]
+    fn publishing_requires_an_enabled_registered_attestor() {
+        let (env, contract_id, admin) = setup();
+        let client = EvidenceRegistryClient::new(&env, &contract_id);
+        client.initialize(&admin, &SCHEMA_VERSION);
+        let missing = Address::generate(&env);
+        assert_eq!(
+            client.try_publish_evidence(&valid_input(&env, &missing)),
+            Err(Ok(ContractError::AttestorNotRegistered))
+        );
+
+        client.register_attestor(&missing, &BytesN::from_array(&env, &[9; 32]));
+        client.set_attestor_enabled(&missing, &false);
+        assert_eq!(
+            client.try_publish_evidence(&valid_input(&env, &missing)),
+            Err(Ok(ContractError::AttestorDisabled))
+        );
+    }
+
+    #[test]
+    fn publishing_rejects_invalid_input_without_an_event() {
+        let (env, contract_id, admin) = setup();
+        let publisher = register_publisher(&env, &contract_id, &admin);
+        let client = EvidenceRegistryClient::new(&env, &contract_id);
+        let mut input = valid_input(&env, &publisher);
+        input.score_bps = 10_001;
+        assert_eq!(
+            client.try_publish_evidence(&input),
+            Err(Ok(ContractError::InvalidScore))
+        );
+        assert_eq!(env.events().all().events().len(), 0);
+    }
+
+    #[test]
+    fn publishing_requires_publisher_auth() {
+        let (env, contract_id, admin) = setup();
+        let publisher = register_publisher(&env, &contract_id, &admin);
+        env.set_auths(&[]);
+        let client = EvidenceRegistryClient::new(&env, &contract_id);
+        assert!(
+            client
+                .try_publish_evidence(&valid_input(&env, &publisher))
+                .is_err()
+        );
     }
 }

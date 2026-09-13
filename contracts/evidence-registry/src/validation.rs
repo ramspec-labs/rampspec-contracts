@@ -1,5 +1,3 @@
-#![allow(dead_code)]
-
 use rampspec_shared_types::{
     ContractError, EvidenceInput, MAX_SCORE_BPS, SCHEMA_VERSION, SUPPORTED_PROTOCOL_BITMAP,
 };
