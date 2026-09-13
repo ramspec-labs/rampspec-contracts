@@ -81,6 +81,30 @@ impl EvidenceRegistry {
         .publish(&env);
         Ok(())
     }
+
+    pub fn set_attestor_enabled(
+        env: Env,
+        attestor: Address,
+        enabled: bool,
+    ) -> Result<(), ContractError> {
+        storage::admin(&env)?.require_auth();
+        let mut record =
+            storage::attestor(&env, &attestor).ok_or(ContractError::AttestorNotRegistered)?;
+        if record.enabled == enabled {
+            return Ok(());
+        }
+
+        record.enabled = enabled;
+        record.updated_ledger = env.ledger().sequence();
+        storage::set_attestor(&env, &record);
+        AttestorSet {
+            attestor,
+            enabled,
+            metadata_hash: record.metadata_hash,
+        }
+        .publish(&env);
+        Ok(())
+    }
 }
 
 #[cfg(test)]
@@ -179,5 +203,51 @@ mod tests {
                 .try_register_attestor(&attestor, &metadata_hash)
                 .is_err()
         );
+    }
+
+    #[test]
+    fn disables_and_reenables_an_attestor_without_losing_metadata() {
+        let (env, contract_id, admin) = setup();
+        let client = EvidenceRegistryClient::new(&env, &contract_id);
+        client.initialize(&admin, &SCHEMA_VERSION);
+        let attestor = Address::generate(&env);
+        let metadata_hash = BytesN::from_array(&env, &[3; 32]);
+        client.register_attestor(&attestor, &metadata_hash);
+
+        client.set_attestor_enabled(&attestor, &false);
+        client.set_attestor_enabled(&attestor, &false);
+        let disabled =
+            env.as_contract(&contract_id, || storage::attestor(&env, &attestor).unwrap());
+        assert!(!disabled.enabled);
+        assert_eq!(disabled.metadata_hash, metadata_hash);
+
+        client.set_attestor_enabled(&attestor, &true);
+        let enabled = env.as_contract(&contract_id, || storage::attestor(&env, &attestor).unwrap());
+        assert!(enabled.enabled);
+        assert_eq!(enabled.metadata_hash, metadata_hash);
+    }
+
+    #[test]
+    fn cannot_toggle_an_unknown_attestor() {
+        let (env, contract_id, admin) = setup();
+        let client = EvidenceRegistryClient::new(&env, &contract_id);
+        client.initialize(&admin, &SCHEMA_VERSION);
+        let attestor = Address::generate(&env);
+        assert_eq!(
+            client.try_set_attestor_enabled(&attestor, &false),
+            Err(Ok(ContractError::AttestorNotRegistered))
+        );
+    }
+
+    #[test]
+    fn toggling_requires_admin_auth() {
+        let (env, contract_id, admin) = setup();
+        let client = EvidenceRegistryClient::new(&env, &contract_id);
+        client.initialize(&admin, &SCHEMA_VERSION);
+        let attestor = Address::generate(&env);
+        let metadata_hash = BytesN::from_array(&env, &[4; 32]);
+        client.register_attestor(&attestor, &metadata_hash);
+        env.set_auths(&[]);
+        assert!(client.try_set_attestor_enabled(&attestor, &false).is_err());
     }
 }
