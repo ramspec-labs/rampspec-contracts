@@ -176,12 +176,27 @@ impl EvidenceRegistry {
         .publish(&env);
         Ok(id)
     }
+
+    #[must_use]
+    pub fn get_evidence(env: Env, id: BytesN<32>) -> Option<EvidenceRecord> {
+        storage::evidence(&env, &id)
+    }
+
+    #[must_use]
+    pub fn get_attestor(env: Env, attestor: Address) -> Option<AttestorRecord> {
+        storage::attestor(&env, &attestor)
+    }
+
+    #[must_use]
+    pub fn is_active(env: Env, id: BytesN<32>) -> bool {
+        storage::evidence(&env, &id).is_some_and(|record| record.status == EvidenceStatus::Active)
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use rampspec_shared_types::NetworkKind;
+    use rampspec_shared_types::{InstanceKeyV1, NetworkKind};
     use soroban_sdk::{
         Address, testutils::Address as _, testutils::Events as _, testutils::Ledger as _,
     };
@@ -444,5 +459,42 @@ mod tests {
         });
         assert_eq!(active, id);
         assert_eq!(stored.target_hash, input.target_hash);
+    }
+
+    #[test]
+    fn reads_expose_active_and_absent_state_without_auth() {
+        let (env, contract_id, admin) = setup();
+        let publisher = register_publisher(&env, &contract_id, &admin);
+        let client = EvidenceRegistryClient::new(&env, &contract_id);
+        let id = client.publish_evidence(&valid_input(&env, &publisher));
+        env.set_auths(&[]);
+
+        assert_eq!(client.get_evidence(&id).unwrap().publisher, publisher);
+        assert!(client.is_active(&id));
+        assert!(client.get_attestor(&publisher).unwrap().enabled);
+        let missing = BytesN::from_array(&env, &[99; 32]);
+        assert_eq!(client.get_evidence(&missing), None);
+        assert!(!client.is_active(&missing));
+    }
+
+    #[test]
+    fn reads_remain_available_for_disabled_attestors_while_paused() {
+        let (env, contract_id, admin) = setup();
+        let publisher = register_publisher(&env, &contract_id, &admin);
+        let client = EvidenceRegistryClient::new(&env, &contract_id);
+        let id = client.publish_evidence(&valid_input(&env, &publisher));
+        client.set_attestor_enabled(&publisher, &false);
+        env.as_contract(&contract_id, || {
+            env.storage().instance().set(&InstanceKeyV1::Paused, &true);
+        });
+        env.set_auths(&[]);
+
+        assert_eq!(
+            client.get_evidence(&id).unwrap().status,
+            EvidenceStatus::Active
+        );
+        assert!(!client.get_attestor(&publisher).unwrap().enabled);
+        assert!(client.is_active(&id));
+        assert_eq!(env.events().all().events().len(), 0);
     }
 }
