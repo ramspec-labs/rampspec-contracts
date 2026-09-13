@@ -2,6 +2,7 @@
 #![allow(clippy::missing_errors_doc, clippy::needless_pass_by_value)]
 
 mod storage;
+mod validation;
 
 use rampspec_shared_types::{AttestorRecord, ContractError, SCHEMA_VERSION};
 use soroban_sdk::{Address, BytesN, Env, contract, contractevent, contractimpl};

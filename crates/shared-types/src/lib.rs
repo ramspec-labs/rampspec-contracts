@@ -5,6 +5,7 @@ use soroban_sdk::{Address, BytesN, contracterror, contracttype};
 pub const SCHEMA_VERSION: u32 = 1;
 pub const STORAGE_LAYOUT_VERSION: u32 = 1;
 pub const MAX_SCORE_BPS: u32 = 10_000;
+pub const SUPPORTED_PROTOCOL_BITMAP: u64 = 0x00ff;
 pub const EVIDENCE_ID_DOMAIN: &[u8; 20] = b"rampspec-evidence-v1";
 
 pub type Hash32 = BytesN<32>;
