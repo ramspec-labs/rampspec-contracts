@@ -35,6 +35,10 @@ jobs:
       - run: node scripts/verify-security-readiness.mjs --allow-pending
       - run: node scripts/verify-pubnet-decision.mjs
       - run: node scripts/verify-operations.mjs
+      - name: Verify generated contract interfaces on Windows
+        if: runner.os == 'Windows'
+        shell: powershell
+        run: ./scripts/verify-generated.ps1
 
   wasm:
     runs-on: ubuntu-latest

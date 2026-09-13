@@ -19,7 +19,26 @@ try {
     }
     foreach ($file in $expected) {
         $other = Join-Path $specDirectory $file.Name
-        if ((Get-FileHash $file.FullName -Algorithm SHA256).Hash -ne (Get-FileHash $other -Algorithm SHA256).Hash) {
+        if ($file.Name -eq "manifest.json") {
+            $expectedManifest = Get-Content -LiteralPath $file.FullName -Raw | ConvertFrom-Json
+            $actualManifest = Get-Content -LiteralPath $other -Raw | ConvertFrom-Json
+            foreach ($contract in $actualManifest.contracts.PSObject.Properties) {
+                if ($contract.Value.wasmSha256 -notmatch '^[0-9a-f]{64}$') {
+                    throw "generated WASM hash is invalid: $($contract.Name)"
+                }
+                $expectedContract = $expectedManifest.contracts.PSObject.Properties[$contract.Name].Value
+                if ($expectedContract.wasmSha256 -notmatch '^[0-9a-f]{64}$') {
+                    throw "canonical WASM hash is invalid: $($contract.Name)"
+                }
+                $contract.Value.wasmSha256 = $expectedContract.wasmSha256
+            }
+            $expectedJson = $expectedManifest | ConvertTo-Json -Depth 20 -Compress
+            $actualJson = $actualManifest | ConvertTo-Json -Depth 20 -Compress
+            if ($expectedJson -ne $actualJson) {
+                throw "generated semantic spec drift: manifest.json"
+            }
+        }
+        elseif ((Get-FileHash $file.FullName -Algorithm SHA256).Hash -ne (Get-FileHash $other -Algorithm SHA256).Hash) {
             throw "generated spec drift: $($file.Name)"
         }
     }

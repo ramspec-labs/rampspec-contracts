@@ -41,6 +41,13 @@ if (process.platform === "win32") {
   execFileSync("bash", ["scripts/build-reproducible.sh", wasmDirectory], { stdio: "inherit" });
   execFileSync("bash", ["scripts/verify-generated.sh"], { stdio: "inherit" });
 }
+const specManifest = JSON.parse(await readFile("artifacts/specs/manifest.json", "utf8"));
+for (const [name, entry] of Object.entries(specManifest.contracts)) {
+  const actualHash = sha256(await readFile(join(wasmDirectory, entry.wasm)));
+  if (actualHash !== entry.wasmSha256) {
+    throw new Error(`${name} build does not match the canonical release WASM hash; use the pinned Linux container`);
+  }
+}
 async function copyTracked(prefix, destination) {
   const files = execFileSync("git", ["ls-files", prefix], { encoding: "utf8" }).trim().split(/\r?\n/).filter(Boolean);
   if (files.length === 0) throw new Error(`no tracked release files found under ${prefix}`);
@@ -124,7 +131,6 @@ await writeFile(join(output, "sbom.spdx.json"), `${JSON.stringify({
   creationInfo: { created: createdAt, creators: ["Tool: scripts/build-release.mjs"] }, packages,
 }, null, 2)}\n`, "utf8");
 const buildMetadata = JSON.parse(await readFile(join(wasmDirectory, "provenance.json"), "utf8"));
-const specManifest = JSON.parse(await readFile("artifacts/specs/manifest.json", "utf8"));
 await writeFile(join(output, "provenance.json"), `${JSON.stringify({
   schemaVersion: 1, sourceRevision, sourceDirty: dirty, version, createdAt,
   toolchain: {
