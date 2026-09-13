@@ -1,7 +1,7 @@
 #![allow(dead_code)]
 
 use rampspec_shared_types::{
-    AttestorRecord, ContractError, EvidenceRecord, InstanceKeyV1, PersistentKeyV1,
+    AttestorRecord, ContractError, EvidenceRecord, InstanceKeyV1, NetworkKind, PersistentKeyV1,
 };
 use soroban_sdk::{Address, BytesN, Env};
 
@@ -64,5 +64,34 @@ pub(crate) fn set_evidence(env: &Env, record: &EvidenceRecord) {
     let key = PersistentKeyV1::Evidence(record.id.clone());
     let storage = env.storage().persistent();
     storage.set(&key, record);
+    storage.extend_ttl(&key, PERSISTENT_TTL_THRESHOLD, PERSISTENT_TTL_BUMP);
+}
+
+pub(crate) fn active_id(
+    env: &Env,
+    publisher: &Address,
+    report_hash: &BytesN<32>,
+    network: &NetworkKind,
+) -> Option<BytesN<32>> {
+    env.storage()
+        .persistent()
+        .get(&PersistentKeyV1::ActiveReport(
+            publisher.clone(),
+            report_hash.clone(),
+            network.clone(),
+        ))
+}
+
+pub(crate) fn set_active_id(
+    env: &Env,
+    publisher: &Address,
+    report_hash: &BytesN<32>,
+    network: &NetworkKind,
+    id: &BytesN<32>,
+) {
+    let key =
+        PersistentKeyV1::ActiveReport(publisher.clone(), report_hash.clone(), network.clone());
+    let storage = env.storage().persistent();
+    storage.set(&key, id);
     storage.extend_ttl(&key, PERSISTENT_TTL_THRESHOLD, PERSISTENT_TTL_BUMP);
 }

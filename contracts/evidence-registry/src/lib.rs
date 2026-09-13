@@ -133,7 +133,10 @@ impl EvidenceRegistry {
         input.publisher.require_auth();
 
         let id = evidence_id::derive(&env, &input.publisher, &input.report_hash, &input.network);
-        if storage::evidence(&env, &id).is_some() {
+        if storage::evidence(&env, &id).is_some()
+            || storage::active_id(&env, &input.publisher, &input.report_hash, &input.network)
+                .is_some()
+        {
             return Err(ContractError::EvidenceAlreadyExists);
         }
         let record = EvidenceRecord {
@@ -156,6 +159,13 @@ impl EvidenceRegistry {
             supersedes: None,
         };
         storage::set_evidence(&env, &record);
+        storage::set_active_id(
+            &env,
+            &record.publisher,
+            &record.report_hash,
+            &record.network,
+            &record.id,
+        );
         EvidencePublished {
             id: id.clone(),
             publisher: record.publisher,
@@ -408,5 +418,31 @@ mod tests {
                 .try_publish_evidence(&valid_input(&env, &publisher))
                 .is_err()
         );
+    }
+
+    #[test]
+    fn duplicate_retries_preserve_the_original_record() {
+        let (env, contract_id, admin) = setup();
+        let publisher = register_publisher(&env, &contract_id, &admin);
+        let client = EvidenceRegistryClient::new(&env, &contract_id);
+        let input = valid_input(&env, &publisher);
+        let id = client.publish_evidence(&input);
+
+        for replacement_byte in 20..25 {
+            let mut duplicate = input.clone();
+            duplicate.target_hash = BytesN::from_array(&env, &[replacement_byte; 32]);
+            assert_eq!(
+                client.try_publish_evidence(&duplicate),
+                Err(Ok(ContractError::EvidenceAlreadyExists))
+            );
+            assert_eq!(env.events().all().events().len(), 0);
+        }
+
+        let stored = env.as_contract(&contract_id, || storage::evidence(&env, &id).unwrap());
+        let active = env.as_contract(&contract_id, || {
+            storage::active_id(&env, &publisher, &input.report_hash, &input.network).unwrap()
+        });
+        assert_eq!(active, id);
+        assert_eq!(stored.target_hash, input.target_hash);
     }
 }
