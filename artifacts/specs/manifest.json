@@ -1,0 +1,34 @@
+{
+  "canonicalization": "recursive ASCII object keys, legacy type alias normalized to type, top-level entries sorted",
+  "contracts": {
+    "evidence-registry": {
+      "json": "evidence_registry.json",
+      "jsonSha256": "36c536eaac035df1228b810d7ef62aaba6872172b5e19da9f53217d3943f84c5",
+      "sourceSha256": "1ca00548ba2d81262ce72f886f6d219635ed3b4fa0008858b8219d39d45e8c05",
+      "wasm": "evidence_registry.wasm",
+      "wasmSha256": "89fe782c804492df9a928983e80356fb8c1c8d716327dbb2ba2689a0e894a1f3",
+      "xdr": "evidence_registry.xdr-base64",
+      "xdrSha256": "ee3e4e362767733cdd99d71d8c108a05029a0e712c43bd9813bda49edf6b9940"
+    },
+    "policy-account-fixture": {
+      "json": "policy_account_fixture.json",
+      "jsonSha256": "9bf35c0f9a5206e35365887399d92992d01ba3c471354c533dad77469d11b3e1",
+      "sourceSha256": "287032ffe5c2748e7dc8f8d9cafe55770863c9b58b59e7ceb235e0cb4791e2c1",
+      "wasm": "policy_account_fixture.wasm",
+      "wasmSha256": "0f234b663aa812061234d4a0d27801e29d5ece306c1dec7064668b5427ea8a7f",
+      "xdr": "policy_account_fixture.xdr-base64",
+      "xdrSha256": "5ed77315cf28a5d7ed0d8385e74480e1a5884000bc18c3b9dec2d9f0d13e9167"
+    },
+    "web-auth-fixture": {
+      "json": "web_auth_fixture.json",
+      "jsonSha256": "55b76eecb8cbc954c990b813cbf044f460d838dc00b9887a2236d20688cee73a",
+      "sourceSha256": "71d8bcc3fe8d631f052d3ed28ae3f379ac04d9f8705469676d7636e97d80470b",
+      "wasm": "web_auth_fixture.wasm",
+      "wasmSha256": "a08b539352f37ebb428cfa085241bd19b99578c17d08268d59a2edab77cf9b06",
+      "xdr": "web_auth_fixture.xdr-base64",
+      "xdrSha256": "5bf92009c841c052f4551f43622aaba71d6f52572ee69bbbabbce38bda7f7924"
+    }
+  },
+  "generator": "stellar-cli 27.1.0",
+  "schemaVersion": 1
+}

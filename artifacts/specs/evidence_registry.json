@@ -1,0 +1,1283 @@
+[
+  {
+    "event_v0": {
+      "data_format": "map",
+      "doc": "",
+      "lib": "",
+      "name": "AdminChanged",
+      "params": [
+        {
+          "doc": "",
+          "location": "topic_list",
+          "name": "old_admin",
+          "type": "address"
+        },
+        {
+          "doc": "",
+          "location": "topic_list",
+          "name": "new_admin",
+          "type": "address"
+        }
+      ],
+      "prefix_topics": [
+        "admin_changed"
+      ]
+    }
+  },
+  {
+    "event_v0": {
+      "data_format": "map",
+      "doc": "",
+      "lib": "",
+      "name": "AdminProposed",
+      "params": [
+        {
+          "doc": "",
+          "location": "topic_list",
+          "name": "current_admin",
+          "type": "address"
+        },
+        {
+          "doc": "",
+          "location": "topic_list",
+          "name": "pending_admin",
+          "type": "address"
+        }
+      ],
+      "prefix_topics": [
+        "admin_proposed"
+      ]
+    }
+  },
+  {
+    "event_v0": {
+      "data_format": "map",
+      "doc": "",
+      "lib": "",
+      "name": "AttestorSet",
+      "params": [
+        {
+          "doc": "",
+          "location": "topic_list",
+          "name": "attestor",
+          "type": "address"
+        },
+        {
+          "doc": "",
+          "location": "data",
+          "name": "enabled",
+          "type": "bool"
+        },
+        {
+          "doc": "",
+          "location": "data",
+          "name": "metadata_hash",
+          "type": {
+            "bytes_n": {
+              "n": 32
+            }
+          }
+        }
+      ],
+      "prefix_topics": [
+        "attestor_set"
+      ]
+    }
+  },
+  {
+    "event_v0": {
+      "data_format": "map",
+      "doc": "",
+      "lib": "",
+      "name": "EvidencePublished",
+      "params": [
+        {
+          "doc": "",
+          "location": "topic_list",
+          "name": "id",
+          "type": {
+            "bytes_n": {
+              "n": 32
+            }
+          }
+        },
+        {
+          "doc": "",
+          "location": "topic_list",
+          "name": "publisher",
+          "type": "address"
+        },
+        {
+          "doc": "",
+          "location": "data",
+          "name": "report_hash",
+          "type": {
+            "bytes_n": {
+              "n": 32
+            }
+          }
+        },
+        {
+          "doc": "",
+          "location": "data",
+          "name": "target_hash",
+          "type": {
+            "bytes_n": {
+              "n": 32
+            }
+          }
+        },
+        {
+          "doc": "",
+          "location": "data",
+          "name": "suite_hash",
+          "type": {
+            "bytes_n": {
+              "n": 32
+            }
+          }
+        }
+      ],
+      "prefix_topics": [
+        "evidence_published"
+      ]
+    }
+  },
+  {
+    "event_v0": {
+      "data_format": "map",
+      "doc": "",
+      "lib": "",
+      "name": "EvidenceRevoked",
+      "params": [
+        {
+          "doc": "",
+          "location": "topic_list",
+          "name": "id",
+          "type": {
+            "bytes_n": {
+              "n": 32
+            }
+          }
+        },
+        {
+          "doc": "",
+          "location": "topic_list",
+          "name": "revoker",
+          "type": "address"
+        },
+        {
+          "doc": "",
+          "location": "data",
+          "name": "reason_hash",
+          "type": {
+            "bytes_n": {
+              "n": 32
+            }
+          }
+        }
+      ],
+      "prefix_topics": [
+        "evidence_revoked"
+      ]
+    }
+  },
+  {
+    "event_v0": {
+      "data_format": "map",
+      "doc": "",
+      "lib": "",
+      "name": "EvidenceSuperseded",
+      "params": [
+        {
+          "doc": "",
+          "location": "topic_list",
+          "name": "old_id",
+          "type": {
+            "bytes_n": {
+              "n": 32
+            }
+          }
+        },
+        {
+          "doc": "",
+          "location": "topic_list",
+          "name": "new_id",
+          "type": {
+            "bytes_n": {
+              "n": 32
+            }
+          }
+        },
+        {
+          "doc": "",
+          "location": "data",
+          "name": "authorizer",
+          "type": "address"
+        }
+      ],
+      "prefix_topics": [
+        "evidence_superseded"
+      ]
+    }
+  },
+  {
+    "event_v0": {
+      "data_format": "map",
+      "doc": "",
+      "lib": "",
+      "name": "Initialized",
+      "params": [
+        {
+          "doc": "",
+          "location": "topic_list",
+          "name": "admin",
+          "type": "address"
+        },
+        {
+          "doc": "",
+          "location": "data",
+          "name": "schema_version",
+          "type": "u32"
+        }
+      ],
+      "prefix_topics": [
+        "initialized"
+      ]
+    }
+  },
+  {
+    "event_v0": {
+      "data_format": "map",
+      "doc": "",
+      "lib": "",
+      "name": "PauseChanged",
+      "params": [
+        {
+          "doc": "",
+          "location": "topic_list",
+          "name": "admin",
+          "type": "address"
+        },
+        {
+          "doc": "",
+          "location": "data",
+          "name": "paused",
+          "type": "bool"
+        }
+      ],
+      "prefix_topics": [
+        "pause_changed"
+      ]
+    }
+  },
+  {
+    "event_v0": {
+      "data_format": "map",
+      "doc": "",
+      "lib": "",
+      "name": "Upgraded",
+      "params": [
+        {
+          "doc": "",
+          "location": "data",
+          "name": "old_wasm_hash",
+          "type": {
+            "bytes_n": {
+              "n": 32
+            }
+          }
+        },
+        {
+          "doc": "",
+          "location": "topic_list",
+          "name": "new_wasm_hash",
+          "type": {
+            "bytes_n": {
+              "n": 32
+            }
+          }
+        }
+      ],
+      "prefix_topics": [
+        "upgraded"
+      ]
+    }
+  },
+  {
+    "function_v0": {
+      "doc": "",
+      "inputs": [],
+      "name": "accept_admin",
+      "outputs": [
+        {
+          "result": {
+            "error_type": {
+              "udt": {
+                "name": "ContractError"
+              }
+            },
+            "ok_type": "void"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "function_v0": {
+      "doc": "",
+      "inputs": [
+        {
+          "doc": "",
+          "name": "attestor",
+          "type": "address"
+        }
+      ],
+      "name": "get_attestor",
+      "outputs": [
+        {
+          "option": {
+            "value_type": {
+              "udt": {
+                "name": "AttestorRecord"
+              }
+            }
+          }
+        }
+      ]
+    }
+  },
+  {
+    "function_v0": {
+      "doc": "",
+      "inputs": [
+        {
+          "doc": "",
+          "name": "id",
+          "type": {
+            "bytes_n": {
+              "n": 32
+            }
+          }
+        }
+      ],
+      "name": "get_evidence",
+      "outputs": [
+        {
+          "option": {
+            "value_type": {
+              "udt": {
+                "name": "EvidenceRecord"
+              }
+            }
+          }
+        }
+      ]
+    }
+  },
+  {
+    "function_v0": {
+      "doc": "",
+      "inputs": [
+        {
+          "doc": "",
+          "name": "admin",
+          "type": "address"
+        },
+        {
+          "doc": "",
+          "name": "schema_version",
+          "type": "u32"
+        }
+      ],
+      "name": "initialize",
+      "outputs": [
+        {
+          "result": {
+            "error_type": {
+              "udt": {
+                "name": "ContractError"
+              }
+            },
+            "ok_type": "void"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "function_v0": {
+      "doc": "",
+      "inputs": [
+        {
+          "doc": "",
+          "name": "id",
+          "type": {
+            "bytes_n": {
+              "n": 32
+            }
+          }
+        }
+      ],
+      "name": "is_active",
+      "outputs": [
+        "bool"
+      ]
+    }
+  },
+  {
+    "function_v0": {
+      "doc": "",
+      "inputs": [
+        {
+          "doc": "",
+          "name": "attestor",
+          "type": "address"
+        }
+      ],
+      "name": "maintain_attestor",
+      "outputs": [
+        {
+          "result": {
+            "error_type": {
+              "udt": {
+                "name": "ContractError"
+              }
+            },
+            "ok_type": "void"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "function_v0": {
+      "doc": "",
+      "inputs": [
+        {
+          "doc": "",
+          "name": "id",
+          "type": {
+            "bytes_n": {
+              "n": 32
+            }
+          }
+        }
+      ],
+      "name": "maintain_evidence",
+      "outputs": [
+        {
+          "result": {
+            "error_type": {
+              "udt": {
+                "name": "ContractError"
+              }
+            },
+            "ok_type": "void"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "function_v0": {
+      "doc": "",
+      "inputs": [
+        {
+          "doc": "",
+          "name": "new_admin",
+          "type": "address"
+        }
+      ],
+      "name": "propose_admin",
+      "outputs": [
+        {
+          "result": {
+            "error_type": {
+              "udt": {
+                "name": "ContractError"
+              }
+            },
+            "ok_type": "void"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "function_v0": {
+      "doc": "",
+      "inputs": [
+        {
+          "doc": "",
+          "name": "input",
+          "type": {
+            "udt": {
+              "name": "EvidenceInput"
+            }
+          }
+        }
+      ],
+      "name": "publish_evidence",
+      "outputs": [
+        {
+          "result": {
+            "error_type": {
+              "udt": {
+                "name": "ContractError"
+              }
+            },
+            "ok_type": {
+              "bytes_n": {
+                "n": 32
+              }
+            }
+          }
+        }
+      ]
+    }
+  },
+  {
+    "function_v0": {
+      "doc": "",
+      "inputs": [
+        {
+          "doc": "",
+          "name": "attestor",
+          "type": "address"
+        },
+        {
+          "doc": "",
+          "name": "metadata_hash",
+          "type": {
+            "bytes_n": {
+              "n": 32
+            }
+          }
+        }
+      ],
+      "name": "register_attestor",
+      "outputs": [
+        {
+          "result": {
+            "error_type": {
+              "udt": {
+                "name": "ContractError"
+              }
+            },
+            "ok_type": "void"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "function_v0": {
+      "doc": "",
+      "inputs": [
+        {
+          "doc": "",
+          "name": "id",
+          "type": {
+            "bytes_n": {
+              "n": 32
+            }
+          }
+        },
+        {
+          "doc": "",
+          "name": "reason_hash",
+          "type": {
+            "bytes_n": {
+              "n": 32
+            }
+          }
+        },
+        {
+          "doc": "",
+          "name": "revoker",
+          "type": "address"
+        }
+      ],
+      "name": "revoke_evidence",
+      "outputs": [
+        {
+          "result": {
+            "error_type": {
+              "udt": {
+                "name": "ContractError"
+              }
+            },
+            "ok_type": "void"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "function_v0": {
+      "doc": "",
+      "inputs": [],
+      "name": "schema_version",
+      "outputs": [
+        {
+          "result": {
+            "error_type": {
+              "udt": {
+                "name": "ContractError"
+              }
+            },
+            "ok_type": "u32"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "function_v0": {
+      "doc": "",
+      "inputs": [
+        {
+          "doc": "",
+          "name": "attestor",
+          "type": "address"
+        },
+        {
+          "doc": "",
+          "name": "enabled",
+          "type": "bool"
+        }
+      ],
+      "name": "set_attestor_enabled",
+      "outputs": [
+        {
+          "result": {
+            "error_type": {
+              "udt": {
+                "name": "ContractError"
+              }
+            },
+            "ok_type": "void"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "function_v0": {
+      "doc": "",
+      "inputs": [
+        {
+          "doc": "",
+          "name": "paused",
+          "type": "bool"
+        }
+      ],
+      "name": "set_paused",
+      "outputs": [
+        {
+          "result": {
+            "error_type": {
+              "udt": {
+                "name": "ContractError"
+              }
+            },
+            "ok_type": "void"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "function_v0": {
+      "doc": "",
+      "inputs": [
+        {
+          "doc": "",
+          "name": "old_id",
+          "type": {
+            "bytes_n": {
+              "n": 32
+            }
+          }
+        },
+        {
+          "doc": "",
+          "name": "replacement",
+          "type": {
+            "udt": {
+              "name": "EvidenceInput"
+            }
+          }
+        },
+        {
+          "doc": "",
+          "name": "authorizer",
+          "type": "address"
+        }
+      ],
+      "name": "supersede_evidence",
+      "outputs": [
+        {
+          "result": {
+            "error_type": {
+              "udt": {
+                "name": "ContractError"
+              }
+            },
+            "ok_type": {
+              "bytes_n": {
+                "n": 32
+              }
+            }
+          }
+        }
+      ]
+    }
+  },
+  {
+    "function_v0": {
+      "doc": "",
+      "inputs": [
+        {
+          "doc": "",
+          "name": "new_wasm_hash",
+          "type": {
+            "bytes_n": {
+              "n": 32
+            }
+          }
+        }
+      ],
+      "name": "upgrade",
+      "outputs": [
+        {
+          "result": {
+            "error_type": {
+              "udt": {
+                "name": "ContractError"
+              }
+            },
+            "ok_type": "void"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "udt_error_enum_v0": {
+      "cases": [
+        {
+          "doc": "",
+          "name": "AlreadyInitialized",
+          "value": 1
+        },
+        {
+          "doc": "",
+          "name": "NotInitialized",
+          "value": 2
+        },
+        {
+          "doc": "",
+          "name": "Unauthorized",
+          "value": 3
+        },
+        {
+          "doc": "",
+          "name": "Paused",
+          "value": 4
+        },
+        {
+          "doc": "",
+          "name": "InvalidHash",
+          "value": 5
+        },
+        {
+          "doc": "",
+          "name": "InvalidCounts",
+          "value": 6
+        },
+        {
+          "doc": "",
+          "name": "InvalidScore",
+          "value": 7
+        },
+        {
+          "doc": "",
+          "name": "AttestorNotRegistered",
+          "value": 8
+        },
+        {
+          "doc": "",
+          "name": "AttestorDisabled",
+          "value": 9
+        },
+        {
+          "doc": "",
+          "name": "EvidenceAlreadyExists",
+          "value": 10
+        },
+        {
+          "doc": "",
+          "name": "EvidenceNotFound",
+          "value": 11
+        },
+        {
+          "doc": "",
+          "name": "EvidenceNotActive",
+          "value": 12
+        },
+        {
+          "doc": "",
+          "name": "InvalidSupersession",
+          "value": 13
+        },
+        {
+          "doc": "",
+          "name": "AdminProposalMissing",
+          "value": 14
+        },
+        {
+          "doc": "",
+          "name": "UpgradeNotAllowed",
+          "value": 15
+        }
+      ],
+      "doc": "",
+      "lib": "",
+      "name": "ContractError"
+    }
+  },
+  {
+    "udt_struct_v0": {
+      "doc": "",
+      "fields": [
+        {
+          "doc": "",
+          "name": "attestor",
+          "type": "address"
+        },
+        {
+          "doc": "",
+          "name": "enabled",
+          "type": "bool"
+        },
+        {
+          "doc": "",
+          "name": "metadata_hash",
+          "type": {
+            "bytes_n": {
+              "n": 32
+            }
+          }
+        },
+        {
+          "doc": "",
+          "name": "registered_ledger",
+          "type": "u32"
+        },
+        {
+          "doc": "",
+          "name": "updated_ledger",
+          "type": "u32"
+        }
+      ],
+      "lib": "",
+      "name": "AttestorRecord"
+    }
+  },
+  {
+    "udt_struct_v0": {
+      "doc": "",
+      "fields": [
+        {
+          "doc": "",
+          "name": "artifact_root",
+          "type": {
+            "bytes_n": {
+              "n": 32
+            }
+          }
+        },
+        {
+          "doc": "",
+          "name": "failed",
+          "type": "u32"
+        },
+        {
+          "doc": "",
+          "name": "network",
+          "type": {
+            "udt": {
+              "name": "NetworkKind"
+            }
+          }
+        },
+        {
+          "doc": "",
+          "name": "passed",
+          "type": "u32"
+        },
+        {
+          "doc": "",
+          "name": "protocol_bitmap",
+          "type": "u64"
+        },
+        {
+          "doc": "",
+          "name": "publisher",
+          "type": "address"
+        },
+        {
+          "doc": "",
+          "name": "report_hash",
+          "type": {
+            "bytes_n": {
+              "n": 32
+            }
+          }
+        },
+        {
+          "doc": "",
+          "name": "score_bps",
+          "type": "u32"
+        },
+        {
+          "doc": "",
+          "name": "skipped",
+          "type": "u32"
+        },
+        {
+          "doc": "",
+          "name": "specs_hash",
+          "type": {
+            "bytes_n": {
+              "n": 32
+            }
+          }
+        },
+        {
+          "doc": "",
+          "name": "suite_hash",
+          "type": {
+            "bytes_n": {
+              "n": 32
+            }
+          }
+        },
+        {
+          "doc": "",
+          "name": "target_hash",
+          "type": {
+            "bytes_n": {
+              "n": 32
+            }
+          }
+        },
+        {
+          "doc": "",
+          "name": "warnings",
+          "type": "u32"
+        }
+      ],
+      "lib": "",
+      "name": "EvidenceInput"
+    }
+  },
+  {
+    "udt_struct_v0": {
+      "doc": "",
+      "fields": [
+        {
+          "doc": "",
+          "name": "artifact_root",
+          "type": {
+            "bytes_n": {
+              "n": 32
+            }
+          }
+        },
+        {
+          "doc": "",
+          "name": "created_ledger",
+          "type": "u32"
+        },
+        {
+          "doc": "",
+          "name": "failed",
+          "type": "u32"
+        },
+        {
+          "doc": "",
+          "name": "id",
+          "type": {
+            "bytes_n": {
+              "n": 32
+            }
+          }
+        },
+        {
+          "doc": "",
+          "name": "network",
+          "type": {
+            "udt": {
+              "name": "NetworkKind"
+            }
+          }
+        },
+        {
+          "doc": "",
+          "name": "passed",
+          "type": "u32"
+        },
+        {
+          "doc": "",
+          "name": "protocol_bitmap",
+          "type": "u64"
+        },
+        {
+          "doc": "",
+          "name": "publisher",
+          "type": "address"
+        },
+        {
+          "doc": "",
+          "name": "report_hash",
+          "type": {
+            "bytes_n": {
+              "n": 32
+            }
+          }
+        },
+        {
+          "doc": "",
+          "name": "score_bps",
+          "type": "u32"
+        },
+        {
+          "doc": "",
+          "name": "skipped",
+          "type": "u32"
+        },
+        {
+          "doc": "",
+          "name": "specs_hash",
+          "type": {
+            "bytes_n": {
+              "n": 32
+            }
+          }
+        },
+        {
+          "doc": "",
+          "name": "status",
+          "type": {
+            "udt": {
+              "name": "EvidenceStatus"
+            }
+          }
+        },
+        {
+          "doc": "",
+          "name": "suite_hash",
+          "type": {
+            "bytes_n": {
+              "n": 32
+            }
+          }
+        },
+        {
+          "doc": "",
+          "name": "supersedes",
+          "type": {
+            "option": {
+              "value_type": {
+                "bytes_n": {
+                  "n": 32
+                }
+              }
+            }
+          }
+        },
+        {
+          "doc": "",
+          "name": "target_hash",
+          "type": {
+            "bytes_n": {
+              "n": 32
+            }
+          }
+        },
+        {
+          "doc": "",
+          "name": "warnings",
+          "type": "u32"
+        }
+      ],
+      "lib": "",
+      "name": "EvidenceRecord"
+    }
+  },
+  {
+    "udt_union_v0": {
+      "cases": [
+        {
+          "void_v0": {
+            "doc": "",
+            "name": "Active"
+          }
+        },
+        {
+          "void_v0": {
+            "doc": "",
+            "name": "Superseded"
+          }
+        },
+        {
+          "void_v0": {
+            "doc": "",
+            "name": "Revoked"
+          }
+        }
+      ],
+      "doc": "",
+      "lib": "",
+      "name": "EvidenceStatus"
+    }
+  },
+  {
+    "udt_union_v0": {
+      "cases": [
+        {
+          "void_v0": {
+            "doc": "",
+            "name": "Admin"
+          }
+        },
+        {
+          "void_v0": {
+            "doc": "",
+            "name": "PendingAdmin"
+          }
+        },
+        {
+          "void_v0": {
+            "doc": "",
+            "name": "Paused"
+          }
+        },
+        {
+          "void_v0": {
+            "doc": "",
+            "name": "SchemaVersion"
+          }
+        },
+        {
+          "void_v0": {
+            "doc": "",
+            "name": "CurrentWasmHash"
+          }
+        }
+      ],
+      "doc": "",
+      "lib": "",
+      "name": "InstanceKeyV1"
+    }
+  },
+  {
+    "udt_union_v0": {
+      "cases": [
+        {
+          "void_v0": {
+            "doc": "",
+            "name": "Testnet"
+          }
+        },
+        {
+          "void_v0": {
+            "doc": "",
+            "name": "Futurenet"
+          }
+        },
+        {
+          "void_v0": {
+            "doc": "",
+            "name": "Pubnet"
+          }
+        },
+        {
+          "void_v0": {
+            "doc": "",
+            "name": "Standalone"
+          }
+        }
+      ],
+      "doc": "",
+      "lib": "",
+      "name": "NetworkKind"
+    }
+  },
+  {
+    "udt_union_v0": {
+      "cases": [
+        {
+          "tuple_v0": {
+            "doc": "",
+            "name": "Attestor",
+            "type": [
+              "address"
+            ]
+          }
+        },
+        {
+          "tuple_v0": {
+            "doc": "",
+            "name": "Evidence",
+            "type": [
+              {
+                "bytes_n": {
+                  "n": 32
+                }
+              }
+            ]
+          }
+        },
+        {
+          "tuple_v0": {
+            "doc": "",
+            "name": "ActiveReport",
+            "type": [
+              "address",
+              {
+                "bytes_n": {
+                  "n": 32
+                }
+              },
+              {
+                "udt": {
+                  "name": "NetworkKind"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "tuple_v0": {
+            "doc": "",
+            "name": "SupersededBy",
+            "type": [
+              {
+                "bytes_n": {
+                  "n": 32
+                }
+              }
+            ]
+          }
+        }
+      ],
+      "doc": "",
+      "lib": "",
+      "name": "PersistentKeyV1"
+    }
+  }
+]

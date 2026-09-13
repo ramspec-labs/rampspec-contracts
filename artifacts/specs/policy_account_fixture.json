@@ -1,0 +1,1160 @@
+[
+  {
+    "function_v0": {
+      "doc": "",
+      "inputs": [
+        {
+          "doc": "",
+          "name": "signature_payload",
+          "type": {
+            "bytes_n": {
+              "n": 32
+            }
+          }
+        },
+        {
+          "doc": "",
+          "name": "signatures",
+          "type": {
+            "vec": {
+              "element_type": {
+                "udt": {
+                  "name": "AccountSignature"
+                }
+              }
+            }
+          }
+        },
+        {
+          "doc": "",
+          "name": "auth_contexts",
+          "type": {
+            "vec": {
+              "element_type": {
+                "udt": {
+                  "name": "Context"
+                }
+              }
+            }
+          }
+        }
+      ],
+      "name": "__check_auth",
+      "outputs": [
+        {
+          "result": {
+            "error_type": {
+              "udt": {
+                "name": "PolicyError"
+              }
+            },
+            "ok_type": "void"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "function_v0": {
+      "doc": "",
+      "inputs": [],
+      "name": "config",
+      "outputs": [
+        {
+          "result": {
+            "error_type": {
+              "udt": {
+                "name": "PolicyError"
+              }
+            },
+            "ok_type": {
+              "udt": {
+                "name": "PolicyConfig"
+              }
+            }
+          }
+        }
+      ]
+    }
+  },
+  {
+    "function_v0": {
+      "doc": "",
+      "inputs": [
+        {
+          "doc": "",
+          "name": "admin",
+          "type": "address"
+        },
+        {
+          "doc": "",
+          "name": "signers",
+          "type": {
+            "vec": {
+              "element_type": {
+                "udt": {
+                  "name": "Ed25519Signer"
+                }
+              }
+            }
+          }
+        },
+        {
+          "doc": "",
+          "name": "threshold",
+          "type": "u32"
+        }
+      ],
+      "name": "initialize",
+      "outputs": [
+        {
+          "result": {
+            "error_type": {
+              "udt": {
+                "name": "PolicyError"
+              }
+            },
+            "ok_type": "void"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "function_v0": {
+      "doc": "",
+      "inputs": [],
+      "name": "is_test_only",
+      "outputs": [
+        "bool"
+      ]
+    }
+  },
+  {
+    "function_v0": {
+      "doc": "",
+      "inputs": [],
+      "name": "passkey_supported",
+      "outputs": [
+        "bool"
+      ]
+    }
+  },
+  {
+    "function_v0": {
+      "doc": "",
+      "inputs": [],
+      "name": "schema_version",
+      "outputs": [
+        "u32"
+      ]
+    }
+  },
+  {
+    "function_v0": {
+      "doc": "",
+      "inputs": [
+        {
+          "doc": "",
+          "name": "controls",
+          "type": {
+            "udt": {
+              "name": "PolicyControls"
+            }
+          }
+        }
+      ],
+      "name": "set_controls",
+      "outputs": [
+        {
+          "result": {
+            "error_type": {
+              "udt": {
+                "name": "PolicyError"
+              }
+            },
+            "ok_type": "void"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "function_v0": {
+      "doc": "",
+      "inputs": [
+        {
+          "doc": "",
+          "name": "signers",
+          "type": {
+            "vec": {
+              "element_type": {
+                "udt": {
+                  "name": "PasskeySigner"
+                }
+              }
+            }
+          }
+        },
+        {
+          "doc": "",
+          "name": "threshold",
+          "type": "u32"
+        }
+      ],
+      "name": "set_passkeys",
+      "outputs": [
+        {
+          "result": {
+            "error_type": {
+              "udt": {
+                "name": "PolicyError"
+              }
+            },
+            "ok_type": "void"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "function_v0": {
+      "doc": "",
+      "inputs": [
+        {
+          "doc": "",
+          "name": "signers",
+          "type": {
+            "vec": {
+              "element_type": {
+                "udt": {
+                  "name": "Ed25519Signer"
+                }
+              }
+            }
+          }
+        },
+        {
+          "doc": "",
+          "name": "threshold",
+          "type": "u32"
+        }
+      ],
+      "name": "set_signers",
+      "outputs": [
+        {
+          "result": {
+            "error_type": {
+              "udt": {
+                "name": "PolicyError"
+              }
+            },
+            "ok_type": "void"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "udt_error_enum_v0": {
+      "cases": [
+        {
+          "doc": "",
+          "name": "AlreadyInitialized",
+          "value": 1
+        },
+        {
+          "doc": "",
+          "name": "NotInitialized",
+          "value": 2
+        },
+        {
+          "doc": "",
+          "name": "Unauthorized",
+          "value": 3
+        },
+        {
+          "doc": "",
+          "name": "Paused",
+          "value": 4
+        },
+        {
+          "doc": "",
+          "name": "InvalidHash",
+          "value": 5
+        },
+        {
+          "doc": "",
+          "name": "InvalidCounts",
+          "value": 6
+        },
+        {
+          "doc": "",
+          "name": "InvalidScore",
+          "value": 7
+        },
+        {
+          "doc": "",
+          "name": "AttestorNotRegistered",
+          "value": 8
+        },
+        {
+          "doc": "",
+          "name": "AttestorDisabled",
+          "value": 9
+        },
+        {
+          "doc": "",
+          "name": "EvidenceAlreadyExists",
+          "value": 10
+        },
+        {
+          "doc": "",
+          "name": "EvidenceNotFound",
+          "value": 11
+        },
+        {
+          "doc": "",
+          "name": "EvidenceNotActive",
+          "value": 12
+        },
+        {
+          "doc": "",
+          "name": "InvalidSupersession",
+          "value": 13
+        },
+        {
+          "doc": "",
+          "name": "AdminProposalMissing",
+          "value": 14
+        },
+        {
+          "doc": "",
+          "name": "UpgradeNotAllowed",
+          "value": 15
+        }
+      ],
+      "doc": "",
+      "lib": "",
+      "name": "ContractError"
+    }
+  },
+  {
+    "udt_error_enum_v0": {
+      "cases": [
+        {
+          "doc": "",
+          "name": "NotInitialized",
+          "value": 1
+        },
+        {
+          "doc": "",
+          "name": "AlreadyInitialized",
+          "value": 2
+        },
+        {
+          "doc": "",
+          "name": "InvalidPolicy",
+          "value": 3
+        },
+        {
+          "doc": "",
+          "name": "MissingSignature",
+          "value": 4
+        },
+        {
+          "doc": "",
+          "name": "DuplicateSigner",
+          "value": 5
+        },
+        {
+          "doc": "",
+          "name": "UnauthorizedSigner",
+          "value": 6
+        },
+        {
+          "doc": "",
+          "name": "InsufficientWeight",
+          "value": 7
+        },
+        {
+          "doc": "",
+          "name": "InvalidTimeWindow",
+          "value": 8
+        },
+        {
+          "doc": "",
+          "name": "NotYetValid",
+          "value": 9
+        },
+        {
+          "doc": "",
+          "name": "Expired",
+          "value": 10
+        },
+        {
+          "doc": "",
+          "name": "Rejected",
+          "value": 11
+        },
+        {
+          "doc": "",
+          "name": "Replay",
+          "value": 12
+        },
+        {
+          "doc": "",
+          "name": "RequiredSignerMissing",
+          "value": 13
+        },
+        {
+          "doc": "",
+          "name": "InvalidContext",
+          "value": 14
+        },
+        {
+          "doc": "",
+          "name": "WrongSignatureMode",
+          "value": 15
+        },
+        {
+          "doc": "",
+          "name": "InvalidPasskey",
+          "value": 16
+        }
+      ],
+      "doc": "",
+      "lib": "",
+      "name": "PolicyError"
+    }
+  },
+  {
+    "udt_struct_v0": {
+      "doc": "",
+      "fields": [
+        {
+          "doc": "",
+          "name": "attestor",
+          "type": "address"
+        },
+        {
+          "doc": "",
+          "name": "enabled",
+          "type": "bool"
+        },
+        {
+          "doc": "",
+          "name": "metadata_hash",
+          "type": {
+            "bytes_n": {
+              "n": 32
+            }
+          }
+        },
+        {
+          "doc": "",
+          "name": "registered_ledger",
+          "type": "u32"
+        },
+        {
+          "doc": "",
+          "name": "updated_ledger",
+          "type": "u32"
+        }
+      ],
+      "lib": "",
+      "name": "AttestorRecord"
+    }
+  },
+  {
+    "udt_struct_v0": {
+      "doc": "",
+      "fields": [
+        {
+          "doc": "",
+          "name": "public_key",
+          "type": {
+            "bytes_n": {
+              "n": 32
+            }
+          }
+        },
+        {
+          "doc": "",
+          "name": "signature",
+          "type": {
+            "bytes_n": {
+              "n": 64
+            }
+          }
+        }
+      ],
+      "lib": "",
+      "name": "Ed25519Signature"
+    }
+  },
+  {
+    "udt_struct_v0": {
+      "doc": "",
+      "fields": [
+        {
+          "doc": "",
+          "name": "public_key",
+          "type": {
+            "bytes_n": {
+              "n": 32
+            }
+          }
+        },
+        {
+          "doc": "",
+          "name": "weight",
+          "type": "u32"
+        }
+      ],
+      "lib": "",
+      "name": "Ed25519Signer"
+    }
+  },
+  {
+    "udt_struct_v0": {
+      "doc": "",
+      "fields": [
+        {
+          "doc": "",
+          "name": "artifact_root",
+          "type": {
+            "bytes_n": {
+              "n": 32
+            }
+          }
+        },
+        {
+          "doc": "",
+          "name": "failed",
+          "type": "u32"
+        },
+        {
+          "doc": "",
+          "name": "network",
+          "type": {
+            "udt": {
+              "name": "NetworkKind"
+            }
+          }
+        },
+        {
+          "doc": "",
+          "name": "passed",
+          "type": "u32"
+        },
+        {
+          "doc": "",
+          "name": "protocol_bitmap",
+          "type": "u64"
+        },
+        {
+          "doc": "",
+          "name": "publisher",
+          "type": "address"
+        },
+        {
+          "doc": "",
+          "name": "report_hash",
+          "type": {
+            "bytes_n": {
+              "n": 32
+            }
+          }
+        },
+        {
+          "doc": "",
+          "name": "score_bps",
+          "type": "u32"
+        },
+        {
+          "doc": "",
+          "name": "skipped",
+          "type": "u32"
+        },
+        {
+          "doc": "",
+          "name": "specs_hash",
+          "type": {
+            "bytes_n": {
+              "n": 32
+            }
+          }
+        },
+        {
+          "doc": "",
+          "name": "suite_hash",
+          "type": {
+            "bytes_n": {
+              "n": 32
+            }
+          }
+        },
+        {
+          "doc": "",
+          "name": "target_hash",
+          "type": {
+            "bytes_n": {
+              "n": 32
+            }
+          }
+        },
+        {
+          "doc": "",
+          "name": "warnings",
+          "type": "u32"
+        }
+      ],
+      "lib": "",
+      "name": "EvidenceInput"
+    }
+  },
+  {
+    "udt_struct_v0": {
+      "doc": "",
+      "fields": [
+        {
+          "doc": "",
+          "name": "artifact_root",
+          "type": {
+            "bytes_n": {
+              "n": 32
+            }
+          }
+        },
+        {
+          "doc": "",
+          "name": "created_ledger",
+          "type": "u32"
+        },
+        {
+          "doc": "",
+          "name": "failed",
+          "type": "u32"
+        },
+        {
+          "doc": "",
+          "name": "id",
+          "type": {
+            "bytes_n": {
+              "n": 32
+            }
+          }
+        },
+        {
+          "doc": "",
+          "name": "network",
+          "type": {
+            "udt": {
+              "name": "NetworkKind"
+            }
+          }
+        },
+        {
+          "doc": "",
+          "name": "passed",
+          "type": "u32"
+        },
+        {
+          "doc": "",
+          "name": "protocol_bitmap",
+          "type": "u64"
+        },
+        {
+          "doc": "",
+          "name": "publisher",
+          "type": "address"
+        },
+        {
+          "doc": "",
+          "name": "report_hash",
+          "type": {
+            "bytes_n": {
+              "n": 32
+            }
+          }
+        },
+        {
+          "doc": "",
+          "name": "score_bps",
+          "type": "u32"
+        },
+        {
+          "doc": "",
+          "name": "skipped",
+          "type": "u32"
+        },
+        {
+          "doc": "",
+          "name": "specs_hash",
+          "type": {
+            "bytes_n": {
+              "n": 32
+            }
+          }
+        },
+        {
+          "doc": "",
+          "name": "status",
+          "type": {
+            "udt": {
+              "name": "EvidenceStatus"
+            }
+          }
+        },
+        {
+          "doc": "",
+          "name": "suite_hash",
+          "type": {
+            "bytes_n": {
+              "n": 32
+            }
+          }
+        },
+        {
+          "doc": "",
+          "name": "supersedes",
+          "type": {
+            "option": {
+              "value_type": {
+                "bytes_n": {
+                  "n": 32
+                }
+              }
+            }
+          }
+        },
+        {
+          "doc": "",
+          "name": "target_hash",
+          "type": {
+            "bytes_n": {
+              "n": 32
+            }
+          }
+        },
+        {
+          "doc": "",
+          "name": "warnings",
+          "type": "u32"
+        }
+      ],
+      "lib": "",
+      "name": "EvidenceRecord"
+    }
+  },
+  {
+    "udt_struct_v0": {
+      "doc": "",
+      "fields": [
+        {
+          "doc": "",
+          "name": "authenticator_data",
+          "type": "bytes"
+        },
+        {
+          "doc": "",
+          "name": "challenge",
+          "type": {
+            "bytes_n": {
+              "n": 32
+            }
+          }
+        },
+        {
+          "doc": "",
+          "name": "client_data_hash",
+          "type": {
+            "bytes_n": {
+              "n": 32
+            }
+          }
+        },
+        {
+          "doc": "",
+          "name": "public_key",
+          "type": {
+            "bytes_n": {
+              "n": 65
+            }
+          }
+        },
+        {
+          "doc": "",
+          "name": "signature",
+          "type": {
+            "bytes_n": {
+              "n": 64
+            }
+          }
+        }
+      ],
+      "lib": "",
+      "name": "PasskeySignature"
+    }
+  },
+  {
+    "udt_struct_v0": {
+      "doc": "",
+      "fields": [
+        {
+          "doc": "",
+          "name": "public_key",
+          "type": {
+            "bytes_n": {
+              "n": 65
+            }
+          }
+        },
+        {
+          "doc": "",
+          "name": "weight",
+          "type": "u32"
+        }
+      ],
+      "lib": "",
+      "name": "PasskeySigner"
+    }
+  },
+  {
+    "udt_struct_v0": {
+      "doc": "",
+      "fields": [
+        {
+          "doc": "",
+          "name": "admin",
+          "type": "address"
+        },
+        {
+          "doc": "",
+          "name": "controls",
+          "type": {
+            "udt": {
+              "name": "PolicyControls"
+            }
+          }
+        },
+        {
+          "doc": "",
+          "name": "passkey_signers",
+          "type": {
+            "vec": {
+              "element_type": {
+                "udt": {
+                  "name": "PasskeySigner"
+                }
+              }
+            }
+          }
+        },
+        {
+          "doc": "",
+          "name": "signature_mode",
+          "type": {
+            "udt": {
+              "name": "SignatureMode"
+            }
+          }
+        },
+        {
+          "doc": "",
+          "name": "signers",
+          "type": {
+            "vec": {
+              "element_type": {
+                "udt": {
+                  "name": "Ed25519Signer"
+                }
+              }
+            }
+          }
+        },
+        {
+          "doc": "",
+          "name": "threshold",
+          "type": "u32"
+        }
+      ],
+      "lib": "",
+      "name": "PolicyConfig"
+    }
+  },
+  {
+    "udt_struct_v0": {
+      "doc": "",
+      "fields": [
+        {
+          "doc": "",
+          "name": "additional_signer",
+          "type": {
+            "option": {
+              "value_type": {
+                "bytes_n": {
+                  "n": 32
+                }
+              }
+            }
+          }
+        },
+        {
+          "doc": "",
+          "name": "expires_at_ledger",
+          "type": "u32"
+        },
+        {
+          "doc": "",
+          "name": "reject_all",
+          "type": "bool"
+        },
+        {
+          "doc": "",
+          "name": "required_contract",
+          "type": {
+            "option": {
+              "value_type": "address"
+            }
+          }
+        },
+        {
+          "doc": "",
+          "name": "required_function",
+          "type": {
+            "option": {
+              "value_type": "symbol"
+            }
+          }
+        },
+        {
+          "doc": "",
+          "name": "valid_from_ledger",
+          "type": "u32"
+        }
+      ],
+      "lib": "",
+      "name": "PolicyControls"
+    }
+  },
+  {
+    "udt_union_v0": {
+      "cases": [
+        {
+          "tuple_v0": {
+            "doc": "",
+            "name": "Ed25519",
+            "type": [
+              {
+                "udt": {
+                  "name": "Ed25519Signature"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "tuple_v0": {
+            "doc": "",
+            "name": "Passkey",
+            "type": [
+              {
+                "udt": {
+                  "name": "PasskeySignature"
+                }
+              }
+            ]
+          }
+        }
+      ],
+      "doc": "",
+      "lib": "",
+      "name": "AccountSignature"
+    }
+  },
+  {
+    "udt_union_v0": {
+      "cases": [
+        {
+          "void_v0": {
+            "doc": "",
+            "name": "Active"
+          }
+        },
+        {
+          "void_v0": {
+            "doc": "",
+            "name": "Superseded"
+          }
+        },
+        {
+          "void_v0": {
+            "doc": "",
+            "name": "Revoked"
+          }
+        }
+      ],
+      "doc": "",
+      "lib": "",
+      "name": "EvidenceStatus"
+    }
+  },
+  {
+    "udt_union_v0": {
+      "cases": [
+        {
+          "void_v0": {
+            "doc": "",
+            "name": "Admin"
+          }
+        },
+        {
+          "void_v0": {
+            "doc": "",
+            "name": "PendingAdmin"
+          }
+        },
+        {
+          "void_v0": {
+            "doc": "",
+            "name": "Paused"
+          }
+        },
+        {
+          "void_v0": {
+            "doc": "",
+            "name": "SchemaVersion"
+          }
+        },
+        {
+          "void_v0": {
+            "doc": "",
+            "name": "CurrentWasmHash"
+          }
+        }
+      ],
+      "doc": "",
+      "lib": "",
+      "name": "InstanceKeyV1"
+    }
+  },
+  {
+    "udt_union_v0": {
+      "cases": [
+        {
+          "void_v0": {
+            "doc": "",
+            "name": "Testnet"
+          }
+        },
+        {
+          "void_v0": {
+            "doc": "",
+            "name": "Futurenet"
+          }
+        },
+        {
+          "void_v0": {
+            "doc": "",
+            "name": "Pubnet"
+          }
+        },
+        {
+          "void_v0": {
+            "doc": "",
+            "name": "Standalone"
+          }
+        }
+      ],
+      "doc": "",
+      "lib": "",
+      "name": "NetworkKind"
+    }
+  },
+  {
+    "udt_union_v0": {
+      "cases": [
+        {
+          "tuple_v0": {
+            "doc": "",
+            "name": "Attestor",
+            "type": [
+              "address"
+            ]
+          }
+        },
+        {
+          "tuple_v0": {
+            "doc": "",
+            "name": "Evidence",
+            "type": [
+              {
+                "bytes_n": {
+                  "n": 32
+                }
+              }
+            ]
+          }
+        },
+        {
+          "tuple_v0": {
+            "doc": "",
+            "name": "ActiveReport",
+            "type": [
+              "address",
+              {
+                "bytes_n": {
+                  "n": 32
+                }
+              },
+              {
+                "udt": {
+                  "name": "NetworkKind"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "tuple_v0": {
+            "doc": "",
+            "name": "SupersededBy",
+            "type": [
+              {
+                "bytes_n": {
+                  "n": 32
+                }
+              }
+            ]
+          }
+        }
+      ],
+      "doc": "",
+      "lib": "",
+      "name": "PersistentKeyV1"
+    }
+  },
+  {
+    "udt_union_v0": {
+      "cases": [
+        {
+          "void_v0": {
+            "doc": "",
+            "name": "Ed25519"
+          }
+        },
+        {
+          "void_v0": {
+            "doc": "",
+            "name": "PasskeyCompatible"
+          }
+        }
+      ],
+      "doc": "",
+      "lib": "",
+      "name": "SignatureMode"
+    }
+  }
+]
