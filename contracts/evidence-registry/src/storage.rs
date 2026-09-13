@@ -95,3 +95,31 @@ pub(crate) fn set_active_id(
     storage.set(&key, id);
     storage.extend_ttl(&key, PERSISTENT_TTL_THRESHOLD, PERSISTENT_TTL_BUMP);
 }
+
+pub(crate) fn remove_active_id(
+    env: &Env,
+    publisher: &Address,
+    report_hash: &BytesN<32>,
+    network: &NetworkKind,
+) {
+    env.storage()
+        .persistent()
+        .remove(&PersistentKeyV1::ActiveReport(
+            publisher.clone(),
+            report_hash.clone(),
+            network.clone(),
+        ));
+}
+
+pub(crate) fn superseded_by(env: &Env, id: &BytesN<32>) -> Option<BytesN<32>> {
+    env.storage()
+        .persistent()
+        .get(&PersistentKeyV1::SupersededBy(id.clone()))
+}
+
+pub(crate) fn set_superseded_by(env: &Env, old_id: &BytesN<32>, new_id: &BytesN<32>) {
+    let key = PersistentKeyV1::SupersededBy(old_id.clone());
+    let storage = env.storage().persistent();
+    storage.set(&key, new_id);
+    storage.extend_ttl(&key, PERSISTENT_TTL_THRESHOLD, PERSISTENT_TTL_BUMP);
+}

@@ -49,6 +49,16 @@ pub struct EvidenceRevoked {
     pub reason_hash: BytesN<32>,
 }
 
+#[contractevent]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct EvidenceSuperseded {
+    #[topic]
+    pub old_id: BytesN<32>,
+    #[topic]
+    pub new_id: BytesN<32>,
+    pub authorizer: Address,
+}
+
 #[contract]
 pub struct EvidenceRegistry;
 
@@ -230,6 +240,93 @@ impl EvidenceRegistry {
         }
         .publish(&env);
         Ok(())
+    }
+
+    pub fn supersede_evidence(
+        env: Env,
+        old_id: BytesN<32>,
+        replacement: EvidenceInput,
+        authorizer: Address,
+    ) -> Result<BytesN<32>, ContractError> {
+        let schema_version = storage::schema_version(&env)?;
+        validation::validate_input(&replacement, Some(&old_id), schema_version)?;
+        let mut old = storage::evidence(&env, &old_id).ok_or(ContractError::EvidenceNotFound)?;
+        if old.status != EvidenceStatus::Active {
+            return Err(ContractError::EvidenceNotActive);
+        }
+        let admin = storage::admin(&env)?;
+        if authorizer != old.publisher && authorizer != admin {
+            return Err(ContractError::Unauthorized);
+        }
+        if authorizer != admin && replacement.publisher != old.publisher {
+            return Err(ContractError::InvalidSupersession);
+        }
+        let replacement_attestor = storage::attestor(&env, &replacement.publisher)
+            .ok_or(ContractError::AttestorNotRegistered)?;
+        if !replacement_attestor.enabled {
+            return Err(ContractError::AttestorDisabled);
+        }
+        authorizer.require_auth();
+
+        let new_id = evidence_id::derive(
+            &env,
+            &replacement.publisher,
+            &replacement.report_hash,
+            &replacement.network,
+        );
+        if new_id == old_id {
+            return Err(ContractError::InvalidSupersession);
+        }
+        if storage::evidence(&env, &new_id).is_some()
+            || storage::active_id(
+                &env,
+                &replacement.publisher,
+                &replacement.report_hash,
+                &replacement.network,
+            )
+            .is_some()
+        {
+            return Err(ContractError::EvidenceAlreadyExists);
+        }
+
+        let new_record = EvidenceRecord {
+            id: new_id.clone(),
+            publisher: replacement.publisher,
+            report_hash: replacement.report_hash,
+            target_hash: replacement.target_hash,
+            suite_hash: replacement.suite_hash,
+            specs_hash: replacement.specs_hash,
+            artifact_root: replacement.artifact_root,
+            network: replacement.network,
+            protocol_bitmap: replacement.protocol_bitmap,
+            score_bps: replacement.score_bps,
+            passed: replacement.passed,
+            failed: replacement.failed,
+            warnings: replacement.warnings,
+            skipped: replacement.skipped,
+            created_ledger: env.ledger().sequence(),
+            status: EvidenceStatus::Active,
+            supersedes: Some(old_id.clone()),
+        };
+        old.status = EvidenceStatus::Superseded;
+        storage::set_evidence(&env, &old);
+        storage::set_evidence(&env, &new_record);
+        storage::remove_active_id(&env, &old.publisher, &old.report_hash, &old.network);
+        storage::set_active_id(
+            &env,
+            &new_record.publisher,
+            &new_record.report_hash,
+            &new_record.network,
+            &new_id,
+        );
+        storage::set_superseded_by(&env, &old_id, &new_id);
+        EvidenceSuperseded {
+            old_id,
+            new_id: new_id.clone(),
+            authorizer,
+        }
+        .publish(&env);
+        Ok(new_id)
     }
 }
 
@@ -602,6 +699,83 @@ mod tests {
         assert_eq!(
             client.try_revoke_evidence(&id, &BytesN::from_array(&env, &[31; 32]), &publisher),
             Err(Ok(ContractError::EvidenceNotActive))
+        );
+    }
+
+    #[test]
+    fn supersession_atomically_links_old_and_new_records() {
+        let (env, contract_id, admin) = setup();
+        let publisher = register_publisher(&env, &contract_id, &admin);
+        let client = EvidenceRegistryClient::new(&env, &contract_id);
+        let old_id = client.publish_evidence(&valid_input(&env, &publisher));
+        let mut replacement = valid_input(&env, &publisher);
+        replacement.report_hash = BytesN::from_array(&env, &[42; 32]);
+        let new_id = client.supersede_evidence(&old_id, &replacement, &publisher);
+
+        assert_eq!(
+            client.get_evidence(&old_id).unwrap().status,
+            EvidenceStatus::Superseded
+        );
+        let new_record = client.get_evidence(&new_id).unwrap();
+        assert_eq!(new_record.status, EvidenceStatus::Active);
+        assert_eq!(new_record.supersedes, Some(old_id.clone()));
+        assert_eq!(
+            env.as_contract(&contract_id, || storage::superseded_by(&env, &old_id)),
+            Some(new_id)
+        );
+    }
+
+    #[test]
+    fn supersession_rejects_invalid_ownership_state_and_duplicates() {
+        let (env, contract_id, admin) = setup();
+        let publisher = register_publisher(&env, &contract_id, &admin);
+        let client = EvidenceRegistryClient::new(&env, &contract_id);
+        let old_id = client.publish_evidence(&valid_input(&env, &publisher));
+        let mut replacement = valid_input(&env, &publisher);
+        replacement.report_hash = BytesN::from_array(&env, &[43; 32]);
+        let stranger = Address::generate(&env);
+        assert_eq!(
+            client.try_supersede_evidence(&old_id, &replacement, &stranger),
+            Err(Ok(ContractError::Unauthorized))
+        );
+        assert!(client.is_active(&old_id));
+
+        let duplicate_id = client.publish_evidence(&replacement);
+        assert_eq!(
+            client.try_supersede_evidence(&old_id, &replacement, &publisher),
+            Err(Ok(ContractError::EvidenceAlreadyExists))
+        );
+        assert!(client.is_active(&old_id));
+        assert!(client.is_active(&duplicate_id));
+
+        client.revoke_evidence(&old_id, &BytesN::from_array(&env, &[31; 32]), &publisher);
+        let mut another = replacement;
+        another.report_hash = BytesN::from_array(&env, &[44; 32]);
+        assert_eq!(
+            client.try_supersede_evidence(&old_id, &another, &publisher),
+            Err(Ok(ContractError::EvidenceNotActive))
+        );
+    }
+
+    #[test]
+    fn only_admin_may_move_a_chain_to_another_attestor() {
+        let (env, contract_id, admin) = setup();
+        let publisher = register_publisher(&env, &contract_id, &admin);
+        let client = EvidenceRegistryClient::new(&env, &contract_id);
+        let old_id = client.publish_evidence(&valid_input(&env, &publisher));
+        let second_attestor = Address::generate(&env);
+        client.register_attestor(&second_attestor, &BytesN::from_array(&env, &[8; 32]));
+        let mut replacement = valid_input(&env, &second_attestor);
+        replacement.report_hash = BytesN::from_array(&env, &[45; 32]);
+
+        assert_eq!(
+            client.try_supersede_evidence(&old_id, &replacement, &publisher),
+            Err(Ok(ContractError::InvalidSupersession))
+        );
+        let new_id = client.supersede_evidence(&old_id, &replacement, &admin);
+        assert_eq!(
+            client.get_evidence(&new_id).unwrap().publisher,
+            second_attestor
         );
     }
 }
