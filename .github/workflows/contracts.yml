@@ -29,7 +29,9 @@ jobs:
           Invoke-WebRequest -Uri 'https://github.com/stellar/stellar-cli/releases/download/v27.1.0/stellar-cli-27.1.0-x86_64-pc-windows-msvc.tar.gz' -OutFile $archive
           if ((Get-FileHash -Algorithm SHA256 -LiteralPath $archive).Hash.ToLowerInvariant() -ne $env:STELLAR_CLI_SHA256) { throw 'Stellar CLI checksum mismatch' }
           tar -xzf $archive -C $env:RUNNER_TEMP stellar.exe
-          Copy-Item -LiteralPath (Join-Path $env:RUNNER_TEMP 'stellar.exe') -Destination (Join-Path $env:CARGO_HOME 'bin\stellar.exe') -Force
+          $cargoBin = Join-Path $HOME '.cargo\bin'
+          New-Item -ItemType Directory -Path $cargoBin -Force | Out-Null
+          Copy-Item -LiteralPath (Join-Path $env:RUNNER_TEMP 'stellar.exe') -Destination (Join-Path $cargoBin 'stellar.exe') -Force
           stellar --version
       - run: rustup show
       - run: cargo fmt --all -- --check
