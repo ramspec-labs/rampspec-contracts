@@ -19,6 +19,18 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: Swatinem/rust-cache@401aff9a7a08acb9d27b64936a90db81024cff97 # v2.8.2
+      - name: Install pinned Stellar CLI on Windows
+        if: runner.os == 'Windows'
+        shell: powershell
+        env:
+          STELLAR_CLI_SHA256: b41ff3d28b21e57d5b9fdfed10975b1a7639af7416025287f12f36f218594bfe
+        run: |
+          $archive = Join-Path $env:RUNNER_TEMP 'stellar-cli-27.1.0-x86_64-pc-windows-msvc.tar.gz'
+          Invoke-WebRequest -Uri 'https://github.com/stellar/stellar-cli/releases/download/v27.1.0/stellar-cli-27.1.0-x86_64-pc-windows-msvc.tar.gz' -OutFile $archive
+          if ((Get-FileHash -Algorithm SHA256 -LiteralPath $archive).Hash.ToLowerInvariant() -ne $env:STELLAR_CLI_SHA256) { throw 'Stellar CLI checksum mismatch' }
+          tar -xzf $archive -C $env:RUNNER_TEMP stellar.exe
+          Copy-Item -LiteralPath (Join-Path $env:RUNNER_TEMP 'stellar.exe') -Destination (Join-Path $env:CARGO_HOME 'bin\stellar.exe') -Force
+          stellar --version
       - run: rustup show
       - run: cargo fmt --all -- --check
       - run: cargo clippy --locked --workspace --all-targets -- -D warnings
