@@ -43,7 +43,10 @@ try {
         }
     }
     $expectedBindings = Get-ChildItem artifacts\bindings -Recurse -File |
-        Where-Object { $_.FullName -notmatch '\\(node_modules|dist)\\' }
+        Where-Object {
+            $_.FullName -notmatch '\\(node_modules|dist)\\' -and
+            $_.Name -ne "package-lock.json"
+        }
     foreach ($file in $expectedBindings) {
         $relative = $file.FullName.Substring((Resolve-Path artifacts\bindings).Path.Length + 1)
         $other = Join-Path $bindingDirectory $relative
