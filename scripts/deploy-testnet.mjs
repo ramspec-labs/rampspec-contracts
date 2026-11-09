@@ -8,7 +8,7 @@ const PASSPHRASE = "Test SDF Network ; September 2015";
 const RPC_URL = "https://soroban-testnet.stellar.org";
 const HORIZON_URL = "https://horizon-testnet.stellar.org";
 const runtimeDirectory = resolve(process.argv[2] ?? "deployments/testnet/runtime");
-const artifactDirectory = resolve("artifacts/wasm");
+const artifactDirectory = resolve("artifacts/specs");
 const requiredConfirmation = "deploy-reviewed-artifacts-to-testnet";
 
 function required(name) {
@@ -124,16 +124,34 @@ if (execFileSync("git", ["status", "--porcelain"], { encoding: "utf8" }).trim())
   throw new Error("testnet deployments require a clean source checkout");
 }
 
-if (process.platform === "win32") {
-  execFileSync("powershell", ["-NoProfile", "-File", "scripts/build-reproducible.ps1"], { stdio: "inherit" });
-} else {
-  execFileSync("bash", ["scripts/build-reproducible.sh"], { stdio: "inherit" });
-}
+const specManifest = JSON.parse(
+  await readFile(join(artifactDirectory, "manifest.json"), "utf8"),
+);
 const wasm = {
-  evidenceRegistry: join(artifactDirectory, "evidence_registry.wasm"),
-  policyAccountFixture: join(artifactDirectory, "policy_account_fixture.wasm"),
-  webAuthFixture: join(artifactDirectory, "web_auth_fixture.wasm"),
+  evidenceRegistry: join(
+    artifactDirectory,
+    specManifest.contracts["evidence-registry"].wasm,
+  ),
+  policyAccountFixture: join(
+    artifactDirectory,
+    specManifest.contracts["policy-account-fixture"].wasm,
+  ),
+  webAuthFixture: join(
+    artifactDirectory,
+    specManifest.contracts["web-auth-fixture"].wasm,
+  ),
 };
+for (const [name, path] of Object.entries(wasm)) {
+  const expected = {
+    evidenceRegistry: specManifest.contracts["evidence-registry"].wasmSha256,
+    policyAccountFixture:
+      specManifest.contracts["policy-account-fixture"].wasmSha256,
+    webAuthFixture: specManifest.contracts["web-auth-fixture"].wasmSha256,
+  }[name];
+  if (sha256(await readFile(path)) !== expected) {
+    throw new Error(`${name} canonical WASM does not match its manifest`);
+  }
+}
 const deploy = (path, source) => stellar(
   ["contract", "deploy", "--wasm", path, "--source-account", source],
   { capture: true },
