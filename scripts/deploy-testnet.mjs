@@ -8,7 +8,9 @@ const PASSPHRASE = "Test SDF Network ; September 2015";
 const RPC_URL = "https://soroban-testnet.stellar.org";
 const HORIZON_URL = "https://horizon-testnet.stellar.org";
 const runtimeDirectory = resolve(process.argv[2] ?? "deployments/testnet/runtime");
-const artifactDirectory = resolve("artifacts/specs");
+const artifactDirectory = resolve(
+  process.env.RAMPSPEC_WASM_DIRECTORY ?? "artifacts/wasm",
+);
 const requiredConfirmation = "deploy-reviewed-artifacts-to-testnet";
 
 function required(name) {
@@ -125,7 +127,7 @@ if (execFileSync("git", ["status", "--porcelain"], { encoding: "utf8" }).trim())
 }
 
 const specManifest = JSON.parse(
-  await readFile(join(artifactDirectory, "manifest.json"), "utf8"),
+  await readFile(resolve("artifacts/specs/manifest.json"), "utf8"),
 );
 const wasm = {
   evidenceRegistry: join(
