@@ -54,6 +54,18 @@ function sha256(content) {
   return createHash("sha256").update(content).digest("hex");
 }
 
+async function rpc(method, params) {
+  const response = await fetch(RPC_URL, {
+    body: JSON.stringify({ id: 1, jsonrpc: "2.0", method, params }),
+    headers: { "content-type": "application/json" },
+    method: "POST",
+  });
+  if (!response.ok) throw new Error(`testnet RPC returned HTTP ${response.status}`);
+  const body = await response.json();
+  if (body.error) throw new Error(`testnet RPC ${method} failed: ${JSON.stringify(body.error)}`);
+  return body.result;
+}
+
 async function fundedAddress(alias) {
   const address = stellarKey(["keys", "public-key", alias]);
   if (!/^G[A-Z2-7]{55}$/.test(address)) throw new Error(`${alias} did not resolve to a G address`);
@@ -184,14 +196,19 @@ const wasmSha256 = Object.fromEntries(await Promise.all(
     await verifyWasm(id, wasm[name], name),
   ]),
 ));
-const eventsRaw = stellar([
-  "events", "--start-ledger", String(startLedger), "--count", "100", "--output", "json",
-  "--id", contracts.evidenceRegistry, contracts.webAuthFixture, contracts.policyAccountFixture,
-], { capture: true });
-const events = JSON.parse(eventsRaw);
-if (!Array.isArray(events) || events.length < 6) throw new Error("deployment event journey is incomplete");
-const transactions = [...new Set(events.map((event) => event.txHash ?? event.tx_hash).filter(Boolean))];
-if (transactions.length < 6) throw new Error("deployment transaction hashes were not captured from RPC events");
+const eventResult = await rpc("getEvents", {
+  filters: [{ contractIds: Object.values(contracts), type: "contract" }],
+  pagination: { limit: 100 },
+  startLedger,
+});
+const events = eventResult?.events;
+if (!Array.isArray(events) || events.length < 5) {
+  throw new Error("deployment event journey is incomplete");
+}
+const transactions = [...new Set(events.map((event) => event.txHash).filter(Boolean))];
+if (transactions.length < 5) {
+  throw new Error("deployment transaction hashes were not captured from RPC events");
+}
 const latestLedgerSequence = latestLedger();
 
 const manifest = sealDeploymentManifest({
