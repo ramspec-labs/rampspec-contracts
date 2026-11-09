@@ -77,9 +77,25 @@ async function verifyWasm(contractId, expectedPath, name) {
 }
 
 await mkdir(runtimeDirectory, { recursive: true });
-const networkInfoBefore = JSON.parse(stellar(["network", "info", "--output", "json"], { capture: true }));
-const startLedger = Number(networkInfoBefore.latestLedger);
-if (!Number.isSafeInteger(startLedger) || startLedger < 1) throw new Error("testnet RPC returned no valid ledger");
+const networkInfo = JSON.parse(
+  stellar(["network", "info", "--output", "json"], { capture: true }),
+);
+if (networkInfo.passphrase !== PASSPHRASE) {
+  throw new Error("testnet RPC returned the wrong network passphrase");
+}
+
+function latestLedger() {
+  const ledger = JSON.parse(
+    stellar(["ledger", "latest", "--output", "json"], { capture: true }),
+  );
+  const sequence = Number(ledger.sequence);
+  if (!Number.isSafeInteger(sequence) || sequence < 1) {
+    throw new Error("testnet RPC returned no valid ledger");
+  }
+  return sequence;
+}
+
+const startLedger = latestLedger();
 
 const addressEntries = await Promise.all(
   Object.entries(identities).map(async ([role, alias]) => [role, await fundedAddress(alias)]),
@@ -176,7 +192,7 @@ const events = JSON.parse(eventsRaw);
 if (!Array.isArray(events) || events.length < 6) throw new Error("deployment event journey is incomplete");
 const transactions = [...new Set(events.map((event) => event.txHash ?? event.tx_hash).filter(Boolean))];
 if (transactions.length < 6) throw new Error("deployment transaction hashes were not captured from RPC events");
-const networkInfoAfter = JSON.parse(stellar(["network", "info", "--output", "json"], { capture: true }));
+const latestLedgerSequence = latestLedger();
 
 const manifest = sealDeploymentManifest({
   schemaVersion: 1,
@@ -186,7 +202,7 @@ const manifest = sealDeploymentManifest({
   sourceRelease,
   sourceRevision: currentRevision,
   startLedger,
-  latestLedger: Number(networkInfoAfter.latestLedger),
+  latestLedger: latestLedgerSequence,
   transactions,
   contracts,
   wasmSha256,

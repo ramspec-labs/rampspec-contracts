@@ -29,7 +29,11 @@ function stellar(args, capture = true) {
 
 if (live) {
   const info = JSON.parse(stellar(["network", "info", "--output", "json"]));
-  if (!Number.isSafeInteger(Number(info.latestLedger)) || Number(info.latestLedger) < manifest.latestLedger) {
+  if (info.passphrase !== manifest.networkPassphrase) {
+    throw new Error("RPC belongs to the wrong network");
+  }
+  const ledger = JSON.parse(stellar(["ledger", "latest", "--output", "json"]));
+  if (!Number.isSafeInteger(Number(ledger.sequence)) || Number(ledger.sequence) < manifest.latestLedger) {
     throw new Error("RPC is stale or belongs to the wrong network");
   }
   const directory = await mkdtemp(join(tmpdir(), "rampspec-manifest-"));
