@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "decision": "no-deploy",
   "scope": "evidence-registry",
-  "currentClaim": "local-verification-only",
+  "currentClaim": "testnet-only",
   "maximumClaimUntilReview": "testnet-only",
   "fixturesAllowed": false,
   "pubnetManifest": null,
@@ -22,7 +22,7 @@
   },
   "reasons": [
     "No independent security review or remediation closure exists.",
-    "No verified testnet deployment manifest or signed release exists.",
+    "The verified testnet deployment is not a signed production release.",
     "Administrator and attestor custody have not received production governance approval.",
     "Pubnet TTL cost budget and monitoring are not active."
   ]

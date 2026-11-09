@@ -1,0 +1,42 @@
+{
+  "schemaVersion": 1,
+  "environment": "testnet",
+  "rpcUrl": "https://soroban-testnet.stellar.org",
+  "networkPassphrase": "Test SDF Network ; September 2015",
+  "sourceRelease": "b09a2d6f4561b2e17c02f209022fa456cdcfbfc4",
+  "sourceRevision": "b09a2d6f4561b2e17c02f209022fa456cdcfbfc4",
+  "startLedger": 5644696,
+  "latestLedger": 5644780,
+  "transactions": [
+    "b4deeccfff2008848aa624ee29bd14db2b6d0d0fe2a35eef8d18ba580a3edadf",
+    "a4d0b42d98a82130cb2e0902e748b1960144bc31d0027547dc28f4a6f1a8a2fb",
+    "a2367d6a013a15ec66e717ad9790a74262c0fcb253dc9c0b6d8dbe95d432b49d",
+    "0559b829e61f75ee96fd33b277a7b297baf1f67635c56123844e812244ebdde5",
+    "cf4f8e92b4518a9920d13efc38ba7f4eadfb1487a9e6d11a3af7922bc6d3f1b9"
+  ],
+  "contracts": {
+    "evidenceRegistry": "CCM73G2Q5A5MVRZHYW3WRCAL6SVG6WLVE3H476N3OJDSG65BR4XMXVPN",
+    "policyAccountFixture": "CCI45FLB47JHLHZF4Y4EQC3JPQRT7NQQAXIEZHE6GCDYCAXYPPALFMZ5",
+    "webAuthFixture": "CDS5V7X45CXGUVYAYXEWS4MCPUZRNKSFVMTJ5QYWNE2U4TGRV77ITHO6"
+  },
+  "wasmSha256": {
+    "evidenceRegistry": "293b8dfd5cb59bfc8771ad99d7f48832575a31c5694944204f1a29f6634f27a8",
+    "policyAccountFixture": "0f234b663aa812061234d4a0d27801e29d5ece306c1dec7064668b5427ea8a7f",
+    "webAuthFixture": "a08b539352f37ebb428cfa085241bd19b99578c17d08268d59a2edab77cf9b06"
+  },
+  "administrators": {
+    "evidenceRegistry": "GCUNIL44GUGIMHCGRSMBSDS4ORR76B3QIK7XIVYZQXOVGUFUXBYVYRDT",
+    "policyAccountFixture": "GBCR4P27NPE4U6ZJZPHS33R4DATYD5OY7X2VN4XLBOCYOPQOJH6UEDNC",
+    "webAuthFixture": "GDHWHB6EHQ5T6S275MGDNIFTQBEKAX5LQH4HQPKEO4E6VSVDYGDUL4YY"
+  },
+  "attestor": "GAW35CVR2QVT6TODISJSO2JCAZB7QGS64PXQN264R4G3OUDE6OFMXWGT",
+  "fixtureTestOnly": true,
+  "verification": {
+    "codeHashes": true,
+    "reads": true,
+    "writes": true,
+    "events": true
+  },
+  "verifiedAt": "2026-11-09T18:05:44.042Z",
+  "integritySha256": "9c17cec3568e83c7a1caba34a4675a46ad0a884b5047ae4f26e3bb71f3929e81"
+}
