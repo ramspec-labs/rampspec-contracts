@@ -1,0 +1,18 @@
+[extend]
+useDefault = true
+
+[[allowlists]]
+description = "Public Stellar account and contract StrKeys"
+regexes = [
+  '''\b[CG][A-Z2-7]{55}\b''',
+]
+
+[[allowlists]]
+description = "Published WASM and integrity checksums in versioned testnet manifests"
+condition = "AND"
+paths = [
+  '''deployments/testnet/manifest\.v[0-9]+\.[0-9]+\.[0-9]+\.json''',
+]
+regexes = [
+  '''\b[0-9a-f]{64}\b''',
+]
