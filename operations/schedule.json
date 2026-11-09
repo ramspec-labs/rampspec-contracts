@@ -60,9 +60,9 @@
       "trigger": "calendar",
       "requiresDeployment": false,
       "status": "scheduled",
-      "lastCompletedAt": "2026-09-13T00:00:00.000Z",
-      "nextDueAt": "2026-09-20T00:00:00.000Z",
-      "evidence": "security/dependency-exceptions.json"
+      "lastCompletedAt": "2026-11-09T16:00:00.000Z",
+      "nextDueAt": "2026-11-16T16:00:00.000Z",
+      "evidence": "security/dependency-review-2026-11-09.md"
     },
     {
       "id": "incident-recovery-drill",

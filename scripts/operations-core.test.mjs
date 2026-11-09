@@ -7,7 +7,7 @@ const schedule = JSON.parse(await readFile("operations/schedule.json", "utf8"));
 const alerts = JSON.parse(await readFile("operations/alerts.json", "utf8"));
 const compatibility = JSON.parse(await readFile("operations/compatibility-policy.json", "utf8"));
 const dependencyExceptions = JSON.parse(await readFile("security/dependency-exceptions.json", "utf8"));
-const now = Date.parse("2026-09-13T12:00:00Z");
+const now = Date.parse("2026-11-09T16:30:00Z");
 
 test("accepts owned schedules and honest deployment blocks", () => {
   const result = validateOperations(schedule, alerts, compatibility, dependencyExceptions, now);
@@ -43,4 +43,15 @@ test("rejects expired dependency exceptions", () => {
   const expired = structuredClone(dependencyExceptions);
   expired.exceptions[0].reviewBy = "2026-09-01T00:00:00Z";
   assert.throws(() => validateOperations(schedule, alerts, compatibility, expired, now), /exception.*expired/);
+});
+
+test("bounds vulnerable exceptions to proven non-production exposure", () => {
+  const unbounded = structuredClone(dependencyExceptions);
+  const vulnerable = unbounded.exceptions.find((item) => item.classification === "vulnerable-non-production");
+  vulnerable.reviewBy = "2027-01-09T16:00:00.000Z";
+  assert.throws(() => validateOperations(schedule, alerts, compatibility, unbounded, now), /expire within 31 days/);
+
+  const unexplained = structuredClone(dependencyExceptions);
+  unexplained.exceptions.find((item) => item.classification === "vulnerable-non-production").rationale = "Accepted temporarily.";
+  assert.throws(() => validateOperations(schedule, alerts, compatibility, unexplained, now), /prove non-production scope/);
 });

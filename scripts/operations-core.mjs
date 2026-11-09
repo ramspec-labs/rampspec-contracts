@@ -74,12 +74,19 @@ export function validateOperations(schedule, alerts, compatibility, dependencyEx
     "rationale", "owner", "acceptedAt", "reviewBy",
   ];
   for (const exception of dependencyExceptions.exceptions) {
+    const acceptedAt = Date.parse(exception?.acceptedAt);
+    const reviewBy = Date.parse(exception?.reviewBy);
+    const classifications = new Set(["unmaintained-not-vulnerable", "vulnerable-non-production"]);
     if (!exception || JSON.stringify(Object.keys(exception).sort()) !== JSON.stringify([...exceptionFields].sort())
       || exception.ecosystem !== "cargo" || !/^RUSTSEC-[0-9]{4}-[0-9]{4}$/.test(exception.advisory)
-      || advisories.has(exception.advisory) || exception.classification !== "unmaintained-not-vulnerable"
+      || advisories.has(exception.advisory) || !classifications.has(exception.classification)
       || !exception.package || !exception.version || !exception.dependencyPath || !exception.rationale || !exception.owner
-      || !Number.isFinite(Date.parse(exception.acceptedAt)) || Date.parse(exception.reviewBy) <= now) {
+      || !Number.isFinite(acceptedAt) || acceptedAt > now || reviewBy <= now) {
       throw new Error("dependency exception is malformed, duplicated, or expired");
+    }
+    if (exception.classification === "vulnerable-non-production"
+      && (reviewBy - acceptedAt > 31 * 86_400_000 || !/wasm32|non-production/u.test(exception.rationale))) {
+      throw new Error("vulnerable dependency exception must prove non-production scope and expire within 31 days");
     }
     advisories.add(exception.advisory);
   }

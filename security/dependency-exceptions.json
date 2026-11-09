@@ -12,6 +12,18 @@
       "owner": "security-owner",
       "acceptedAt": "2026-09-13T00:00:00.000Z",
       "reviewBy": "2026-12-12T00:00:00.000Z"
+    },
+    {
+      "ecosystem": "cargo",
+      "advisory": "RUSTSEC-2026-0387",
+      "package": "crypto-bigint",
+      "version": "0.5.5",
+      "classification": "vulnerable-non-production",
+      "dependencyPath": "native soroban-env-host 27.0.0 and policy-account-fixture test signing -> elliptic-curve 0.13.8 -> crypto-bigint 0.5.5",
+      "rationale": "The crate is absent from normal and build dependencies for the wasm32-unknown-unknown production target. It is limited to native Soroban host tooling and fixture test signing while contract P-256 verification is delegated to the host. Upgrade when the supported Soroban SDK moves to the fixed crypto-bigint line; do not introduce native production cryptography through this exception.",
+      "owner": "security-owner",
+      "acceptedAt": "2026-11-09T16:00:00.000Z",
+      "reviewBy": "2026-12-09T16:00:00.000Z"
     }
   ]
 }
