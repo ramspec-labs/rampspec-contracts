@@ -8,7 +8,7 @@ Deployment-dependent work is `blocked-no-deployment` while the pubnet decision a
 
 ## TTL and Recovery
 
-Inspect instance/code TTL and every live attestor, evidence record, uniqueness index, and supersession link at least every 30 days. Alert at 45 days remaining, escalate at 30 days, and stop publication below 14 instance days. Use administrator-authorized `maintain_attestor` and `maintain_evidence`; never infer success from transaction submission alone. Read the entries again from RPC and retain transaction/ledger evidence. Archived entries require a reviewed restore-footprint transaction before maintenance. Verify restoration from the deployment manifest and event archive.
+Inspect instance/code TTL and every live attestor, evidence record (including revoked records), uniqueness index, and supersession link at least every 30 days. Alert at 45 days remaining, escalate at 30 days, and stop publication below 14 instance days. Use administrator-authorized `maintain_attestor` and `maintain_evidence`; maintaining revoked evidence extends only its existing record and does not recreate an active index. Use `maintain_supersession_chain` from the first superseded record to refresh a complete forward chain in one transaction. Never infer success from transaction submission alone. Read the entries again from RPC and retain transaction/ledger evidence. Archived entries require a reviewed restore-footprint transaction before maintenance. Verify restoration from the deployment manifest and event archive.
 
 ## Event Index Recovery
 

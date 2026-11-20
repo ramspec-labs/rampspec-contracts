@@ -731,6 +731,8 @@ dependencies = [
  "proptest",
  "rampspec-shared-types",
  "rampspec-test-support",
+ "serde",
+ "serde_json",
  "soroban-sdk",
 ]
 

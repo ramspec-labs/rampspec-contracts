@@ -202,6 +202,11 @@ export interface Client {
    */
   cancel_admin_transfer: (options?: MethodOptions) => Promise<AssembledTransaction<Result<void>>>
 
+  /**
+   * Construct and simulate a maintain_supersession_chain transaction. Returns an `AssembledTransaction` object which will have a `result` field containing the result of the simulation. If this transaction changes contract state, you will need to call `signAndSend()` on the returned object.
+   */
+  maintain_supersession_chain: ({first_id}: {first_id: Buffer}, options?: MethodOptions) => Promise<AssembledTransaction<Result<void>>>
+
 }
 export class Client extends ContractClient {
   static async deploy<T = Client>(
@@ -247,6 +252,7 @@ export class Client extends ContractClient {
         "AAAAAAAAAAAAAAASc3VwZXJzZWRlX2V2aWRlbmNlAAAAAAADAAAAAAAAAAZvbGRfaWQAAAAAA+4AAAAgAAAAAAAAAAtyZXBsYWNlbWVudAAAAAfQAAAADUV2aWRlbmNlSW5wdXQAAAAAAAAAAAAACmF1dGhvcml6ZXIAAAAAABMAAAABAAAD6QAAA+4AAAAgAAAH0AAAAA1Db250cmFjdEVycm9yAAAA",
         "AAAAAAAAAAAAAAAUc2V0X2F0dGVzdG9yX2VuYWJsZWQAAAACAAAAAAAAAAhhdHRlc3RvcgAAABMAAAAAAAAAB2VuYWJsZWQAAAAAAQAAAAEAAAPpAAAAAgAAB9AAAAANQ29udHJhY3RFcnJvcgAAAA==",
         "AAAAAAAAAAAAAAAVY2FuY2VsX2FkbWluX3RyYW5zZmVyAAAAAAAAAAAAAAEAAAPpAAAAAgAAB9AAAAANQ29udHJhY3RFcnJvcgAAAA==",
+        "AAAAAAAAAAAAAAAbbWFpbnRhaW5fc3VwZXJzZXNzaW9uX2NoYWluAAAAAAEAAAAAAAAACGZpcnN0X2lkAAAD7gAAACAAAAABAAAD6QAAAAIAAAfQAAAADUNvbnRyYWN0RXJyb3IAAAA=",
         "AAAAAgAAAAAAAAAAAAAAC05ldHdvcmtLaW5kAAAAAAQAAAAAAAAAAAAAAAdUZXN0bmV0AAAAAAAAAAAAAAAACUZ1dHVyZW5ldAAAAAAAAAAAAAAAAAAABlB1Ym5ldAAAAAAAAAAAAAAAAAAKU3RhbmRhbG9uZQAA",
         "AAAABAAAAAAAAAAAAAAADUNvbnRyYWN0RXJyb3IAAAAAAAAPAAAAAAAAABJBbHJlYWR5SW5pdGlhbGl6ZWQAAAAAAAEAAAAAAAAADk5vdEluaXRpYWxpemVkAAAAAAACAAAAAAAAAAxVbmF1dGhvcml6ZWQAAAADAAAAAAAAAAZQYXVzZWQAAAAAAAQAAAAAAAAAC0ludmFsaWRIYXNoAAAAAAUAAAAAAAAADUludmFsaWRDb3VudHMAAAAAAAAGAAAAAAAAAAxJbnZhbGlkU2NvcmUAAAAHAAAAAAAAABVBdHRlc3Rvck5vdFJlZ2lzdGVyZWQAAAAAAAAIAAAAAAAAABBBdHRlc3RvckRpc2FibGVkAAAACQAAAAAAAAAVRXZpZGVuY2VBbHJlYWR5RXhpc3RzAAAAAAAACgAAAAAAAAAQRXZpZGVuY2VOb3RGb3VuZAAAAAsAAAAAAAAAEUV2aWRlbmNlTm90QWN0aXZlAAAAAAAADAAAAAAAAAATSW52YWxpZFN1cGVyc2Vzc2lvbgAAAAANAAAAAAAAABRBZG1pblByb3Bvc2FsTWlzc2luZwAAAA4AAAAAAAAAEVVwZ3JhZGVOb3RBbGxvd2VkAAAAAAAADw==",
         "AAAAAQAAAAAAAAAAAAAADUV2aWRlbmNlSW5wdXQAAAAAAAANAAAAAAAAAA1hcnRpZmFjdF9yb290AAAAAAAD7gAAACAAAAAAAAAABmZhaWxlZAAAAAAABAAAAAAAAAAHbmV0d29yawAAAAfQAAAAC05ldHdvcmtLaW5kAAAAAAAAAAAGcGFzc2VkAAAAAAAEAAAAAAAAAA9wcm90b2NvbF9iaXRtYXAAAAAABgAAAAAAAAAJcHVibGlzaGVyAAAAAAAAEwAAAAAAAAALcmVwb3J0X2hhc2gAAAAD7gAAACAAAAAAAAAACXNjb3JlX2JwcwAAAAAAAAQAAAAAAAAAB3NraXBwZWQAAAAABAAAAAAAAAAKc3BlY3NfaGFzaAAAAAAD7gAAACAAAAAAAAAACnN1aXRlX2hhc2gAAAAAA+4AAAAgAAAAAAAAAAt0YXJnZXRfaGFzaAAAAAPuAAAAIAAAAAAAAAAId2FybmluZ3MAAAAE",
@@ -275,6 +281,8 @@ export class Client extends ContractClient {
         register_attestor: this.txFromJSON<Result<void>>,
         supersede_evidence: this.txFromJSON<Result<Buffer>>,
         set_attestor_enabled: this.txFromJSON<Result<void>>,
+        cancel_admin_transfer: this.txFromJSON<Result<void>>,
+        maintain_supersession_chain: this.txFromJSON<Result<void>>
         cancel_admin_transfer: this.txFromJSON<Result<void>>
   }
 }

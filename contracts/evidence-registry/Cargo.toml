@@ -16,6 +16,8 @@ soroban-sdk.workspace = true
 base64 = "=0.22.1"
 proptest = "=1.11.0"
 rampspec-test-support = { path = "../../crates/test-support" }
+serde = { version = "=1.0.229", features = ["derive"] }
+serde_json = "=1.0.151"
 soroban-sdk = { workspace = true, features = ["testutils"] }
 
 [lints]

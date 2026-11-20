@@ -3,11 +3,21 @@
   "contracts": {
     "evidence-registry": {
       "json": "evidence_registry.json",
+      "jsonSha256": "8c81660a6d8fa8be73eefa1267111774367c5c0fcc3fbb0cfa89875002c02d1d",
+      "sourceSha256": "1bf9900d68f60c4680f659b9875f256f73f9cc696098633cc3e0646392d8a102",
       "jsonSha256": "adf17acbe5efff9008700ce9e9e50cb07a259559424c3570c23e948f013fab3a",
       "sourceSha256": "8bad57c11af42f9730c7d735bf1f3ae35eedefd21928b0e903eed3c6c44756fc",
       "wasm": "evidence_registry.wasm",
-      "wasmSha256": "293b8dfd5cb59bfc8771ad99d7f48832575a31c5694944204f1a29f6634f27a8",
+      "wasmSha256": "3151bac42866dc272f634f9eaca87251e801d737d56aaa92855a357758df4d03",
       "xdr": "evidence_registry.xdr-base64",
+      "xdrSha256": "edd3fc5916e9997a2d2b05fb6093aca7e09c24ddaf8929c49a40914d7b16f30d"
+    },
+    "policy-account-fixture": {
+      "json": "policy_account_fixture.json",
+      "jsonSha256": "9bf35c0f9a5206e35365887399d92992d01ba3c471354c533dad77469d11b3e1",
+      "sourceSha256": "584d3dc86e2a3449ded00b4e8fbb2bcc5c40c5958987d6d61b3aa423eefcaca4",
+      "wasm": "policy_account_fixture.wasm",
+      "wasmSha256": "ed83ea437265b30fa3a47e5a326c0e951503fe2ae58d7998117eee11eea52117",
       "xdrSha256": "36f7e27d6f0378917e6468780daba6f23038e0a48d817189c1e33a989102bc5f"
     },
     "policy-account-fixture": {
@@ -22,6 +32,7 @@
     "web-auth-fixture": {
       "json": "web_auth_fixture.json",
       "jsonSha256": "55b76eecb8cbc954c990b813cbf044f460d838dc00b9887a2236d20688cee73a",
+      "sourceSha256": "4c363e1ad590b465c82a6b621fed179c24311eeb74d5b2eab7ff5fd7bd84fc3b",
       "sourceSha256": "71d8bcc3fe8d631f052d3de72ae3f379ac04d9f8705469676d7636e97d80470b",
       "wasm": "web_auth_fixture.wasm",
       "wasmSha256": "a08b539352f37ebb428cfa085241bd19b99578c17d08268d59a2edab77cf9b06",

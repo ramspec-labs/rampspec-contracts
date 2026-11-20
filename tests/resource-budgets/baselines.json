@@ -13,6 +13,7 @@
       "is_active": { "cpuMax": 5000000, "memoryMax": 5000000, "storageWritesMax": 0, "eventsMax": 0, "ttl": "instance" },
       "maintain_attestor": { "cpuMax": 10000000, "memoryMax": 8000000, "storageWritesMax": 0, "eventsMax": 0, "ttl": "persistent" },
       "maintain_evidence": { "cpuMax": 10000000, "memoryMax": 8000000, "storageWritesMax": 1, "eventsMax": 0, "ttl": "persistent" },
+      "maintain_supersession_chain": { "cpuMax": 80000000, "memoryMax": 64000000, "storageWritesMax": 0, "eventsMax": 0, "ttl": "persistent" },
       "propose_admin": { "cpuMax": 15000000, "memoryMax": 12000000, "storageWritesMax": 1, "eventsMax": 1, "ttl": "instance" },
       "publish_evidence": { "cpuMax": 20000000, "memoryMax": 16000000, "storageWritesMax": 2, "eventsMax": 1, "ttl": "persistent" },
       "register_attestor": { "cpuMax": 15000000, "memoryMax": 12000000, "storageWritesMax": 1, "eventsMax": 1, "ttl": "persistent" },

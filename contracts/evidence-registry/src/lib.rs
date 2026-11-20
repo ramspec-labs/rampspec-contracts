@@ -498,6 +498,14 @@ impl EvidenceRegistry {
         storage::admin(&env)?.require_auth();
         storage::maintain_evidence(&env, &id)
     }
+
+    pub fn maintain_supersession_chain(
+        env: Env,
+        first_id: BytesN<32>,
+    ) -> Result<(), ContractError> {
+        storage::admin(&env)?.require_auth();
+        storage::maintain_supersession_chain(&env, &first_id)
+    }
 }
 
 #[cfg(test)]
@@ -506,8 +514,9 @@ mod tests {
     use base64::{Engine as _, engine::general_purpose::STANDARD};
     use rampspec_shared_types::{InstanceKeyV1, NetworkKind, PersistentKeyV1};
     use soroban_sdk::{
-        Address, Bytes, testutils::Address as _, testutils::Events as _, testutils::Ledger as _,
-        testutils::storage::Instance as _, testutils::storage::Persistent as _,
+        Address, Bytes, Vec, testutils::Address as _, testutils::Events as _,
+        testutils::Ledger as _, testutils::storage::Instance as _,
+        testutils::storage::Persistent as _,
     };
 
     const UPGRADE_TARGET_BASE64: &str = "AGFzbQEAAAABFARgAX4BfmACf34AYAJ+fgF+YAAAAg0CAWkBMAAAAWkBXwAAAwYFAQIDAwMFAwEAEAYZA38BQYCAwAALfwBBgIDAAAt/AEGAgMAACwcvBQZtZW1vcnkCAANhZGQAAwFfAAYKX19kYXRhX2VuZAMBC19faGVhcF9iYXNlAwIKjAIFXQIBfwF+AkACQCABp0H/AXEiAkHAAEYNAAJAIAJBBkYNAEIBIQNCg5CAgIABIQEMAgsgAUIIiCEBQgAhAwwBC0IAIQMgARCAgICAACEBCyAAIAE3AwggACADNwMAC5kBAQF/I4CAgIAAQSBrIgIkgICAgAAgAkEQaiAAEIKAgIAAAkACQCACKAIQDQAgAikDGCEAIAIgARCCgICAACACKQMApw0AIAAgAikDCHwiASAAVA0BAkACQCABQv//////////AFYNACABQgiGQgaEIQAMAQsgARCBgICAACEACyACQSBqJICAgIAAIAAPCwAACxCEgICAAAALCQAQhYCAgAAACwQAAAALAgALAEsOY29udHJhY3RzcGVjdjAAAAAAAAAAAAAAAANhZGQAAAAAAgAAAAAAAAABYQAAAAAAAAYAAAAAAAAAAWIAAAAAAAAGAAAAAQAAAAYAHhFjb250cmFjdGVudm1ldGF2MAAAAAAAAAAVAAAAAAB7DmNvbnRyYWN0bWV0YXYwAAAAAAAAAAVyc3ZlcgAAAAAAAAYxLjc0LjAAAAAAAAAAAAAIcnNzZGt2ZXIAAAA5MjEuMC4xLXByZXZpZXcuMSMxMTZjMzViYzllMDNmNGIxYjVlNjViNWVlODMxYWUwZjg2YWE5MmZkAAAA";
@@ -544,6 +553,35 @@ mod tests {
         let publisher = Address::generate(env);
         client.register_attestor(&publisher, &BytesN::from_array(env, &[9; 32]));
         publisher
+    }
+
+    fn supersession_chain_ttls(
+        env: &Env,
+        contract_id: &Address,
+        first_id: &BytesN<32>,
+        chain_length: u8,
+    ) -> Vec<u32> {
+        env.as_contract(contract_id, || {
+            let mut ttls = Vec::new(env);
+            let mut current_id = first_id.clone();
+            for edge in 0..=chain_length {
+                ttls.push_back(
+                    env.storage()
+                        .persistent()
+                        .get_ttl(&PersistentKeyV1::Evidence(current_id.clone())),
+                );
+                if edge < chain_length {
+                    ttls.push_back(
+                        env.storage()
+                            .persistent()
+                            .get_ttl(&PersistentKeyV1::SupersededBy(current_id.clone())),
+                    );
+                    current_id = storage::superseded_by(env, &current_id).unwrap();
+                }
+            }
+            ttls.push_back(env.storage().instance().get_ttl());
+            ttls
+        })
     }
 
     #[test]
@@ -1570,6 +1608,123 @@ mod tests {
     }
 
     #[test]
+    fn maintenance_refreshes_revoked_evidence_without_recreating_active_index() {
+        let (env, contract_id, admin) = setup();
+        let publisher = register_publisher(&env, &contract_id, &admin);
+        let client = EvidenceRegistryClient::new(&env, &contract_id);
+        let evidence_input = valid_input(&env, &publisher);
+        let id = client.publish_evidence(&evidence_input);
+        let reason = BytesN::from_array(&env, &[31; 32]);
+        client.revoke_evidence(&id, &reason, &publisher);
+
+        let record = client.get_evidence(&id).unwrap();
+        assert_eq!(record.status, EvidenceStatus::Revoked);
+        env.as_contract(&contract_id, || {
+            storage::remove_active_id(
+                &env,
+                &record.publisher,
+                &record.report_hash,
+                &record.network,
+            );
+        });
+
+        env.ledger().set_sequence_number(1_500_000);
+        env.as_contract(&contract_id, || storage::set_paused(&env, false));
+        env.ledger().set_sequence_number(2_600_000);
+        let before = env.as_contract(&contract_id, || {
+            env.storage()
+                .persistent()
+                .get_ttl(&PersistentKeyV1::Evidence(id.clone()))
+        });
+        assert!(before < storage::PERSISTENT_TTL_THRESHOLD);
+        let event_count = env.events().all().events().len();
+
+        client.maintain_evidence(&id);
+
+        let (refreshed_ttl, stored_record, active_id) = env.as_contract(&contract_id, || {
+            (
+                env.storage()
+                    .persistent()
+                    .get_ttl(&PersistentKeyV1::Evidence(id.clone())),
+                storage::evidence(&env, &id).unwrap(),
+                storage::active_id(
+                    &env,
+                    &record.publisher,
+                    &record.report_hash,
+                    &record.network,
+                ),
+            )
+        });
+        assert!(refreshed_ttl >= storage::PERSISTENT_TTL_TARGET - 1);
+        assert_eq!(stored_record.status, EvidenceStatus::Revoked);
+        assert_eq!(active_id, None);
+        assert_eq!(env.events().all().events().len(), event_count);
+    }
+
+    #[test]
+    fn revoked_evidence_maintenance_requires_admin_auth_without_effects() {
+        let (env, contract_id, admin) = setup();
+        let publisher = register_publisher(&env, &contract_id, &admin);
+        let client = EvidenceRegistryClient::new(&env, &contract_id);
+        let id = client.publish_evidence(&valid_input(&env, &publisher));
+        client.revoke_evidence(&id, &BytesN::from_array(&env, &[32; 32]), &publisher);
+        let before_ttl = env.as_contract(&contract_id, || {
+            env.storage()
+                .persistent()
+                .get_ttl(&PersistentKeyV1::Evidence(id.clone()))
+        });
+        let before_record = client.get_evidence(&id).unwrap();
+        let event_count = env.events().all().events().len();
+        env.set_auths(&[]);
+
+        assert!(client.try_maintain_evidence(&id).is_err());
+        assert_eq!(
+            env.as_contract(&contract_id, || {
+                env.storage()
+                    .persistent()
+                    .get_ttl(&PersistentKeyV1::Evidence(id.clone()))
+            }),
+            before_ttl
+        );
+        assert_eq!(client.get_evidence(&id), Some(before_record));
+        assert_eq!(env.events().all().events().len(), event_count);
+    }
+
+    #[test]
+    fn maintenance_cannot_restore_an_expired_revocation_record() {
+        let (env, contract_id, admin) = setup();
+        let publisher = register_publisher(&env, &contract_id, &admin);
+        let client = EvidenceRegistryClient::new(&env, &contract_id);
+        let evidence_input = valid_input(&env, &publisher);
+        let id = client.publish_evidence(&evidence_input);
+        client.revoke_evidence(&id, &BytesN::from_array(&env, &[33; 32]), &publisher);
+        env.as_contract(&contract_id, || {
+            storage::remove_active_id(
+                &env,
+                &publisher,
+                &evidence_input.report_hash,
+                &evidence_input.network,
+            );
+            env.storage()
+                .persistent()
+                .remove(&PersistentKeyV1::Evidence(id.clone()));
+        });
+        let instance_ttl = env.as_contract(&contract_id, || env.storage().instance().get_ttl());
+        let event_count = env.events().all().events().len();
+
+        assert_eq!(client.get_evidence(&id), None);
+        assert_eq!(
+            client.try_maintain_evidence(&id),
+            Err(Ok(ContractError::EvidenceNotFound))
+        );
+        assert_eq!(
+            env.as_contract(&contract_id, || env.storage().instance().get_ttl()),
+            instance_ttl
+        );
+        assert_eq!(env.events().all().events().len(), event_count);
+    }
+
+    #[test]
     fn maintenance_repairs_missing_active_indexes_idempotently() {
         let (env, contract_id, admin) = setup();
         let publisher = register_publisher(&env, &contract_id, &admin);
@@ -1656,6 +1811,10 @@ mod tests {
             Err(Ok(ContractError::EvidenceNotFound))
         );
         assert_eq!(
+            client.try_maintain_supersession_chain(&id),
+            Err(Ok(ContractError::InvalidSupersession))
+        );
+        assert_eq!(
             client.try_maintain_attestor(&Address::generate(&env)),
             Err(Ok(ContractError::AttestorNotRegistered))
         );
@@ -1670,5 +1829,131 @@ mod tests {
             client.try_maintain_evidence(&id),
             Err(Ok(ContractError::EvidenceNotFound))
         );
+    }
+
+    #[test]
+    fn maintenance_rejects_incomplete_supersession_chain_without_effects() {
+        let (env, contract_id, admin) = setup();
+        let publisher = register_publisher(&env, &contract_id, &admin);
+        let client = EvidenceRegistryClient::new(&env, &contract_id);
+        let old_id = client.publish_evidence(&valid_input(&env, &publisher));
+        let mut replacement = valid_input(&env, &publisher);
+        replacement.report_hash = BytesN::from_array(&env, &[21; 32]);
+        let new_id = client.supersede_evidence(&old_id, &replacement, &publisher);
+        let new_record = client.get_evidence(&new_id).unwrap();
+
+        env.as_contract(&contract_id, || {
+            env.storage()
+                .persistent()
+                .remove(&PersistentKeyV1::Evidence(new_id.clone()));
+        });
+        env.ledger()
+            .set_sequence_number(env.ledger().sequence() + 1_000);
+        let before = env.as_contract(&contract_id, || {
+            (
+                env.storage()
+                    .persistent()
+                    .get_ttl(&PersistentKeyV1::Evidence(old_id.clone())),
+                env.storage()
+                    .persistent()
+                    .get_ttl(&PersistentKeyV1::SupersededBy(old_id.clone())),
+                env.storage().instance().get_ttl(),
+            )
+        });
+        let event_count = env.events().all().events().len();
+
+        assert_eq!(
+            client.try_maintain_supersession_chain(&old_id),
+            Err(Ok(ContractError::EvidenceNotFound))
+        );
+        assert_eq!(
+            env.as_contract(&contract_id, || {
+                (
+                    env.storage()
+                        .persistent()
+                        .get_ttl(&PersistentKeyV1::Evidence(old_id.clone())),
+                    env.storage()
+                        .persistent()
+                        .get_ttl(&PersistentKeyV1::SupersededBy(old_id.clone())),
+                    env.storage().instance().get_ttl(),
+                )
+            }),
+            before
+        );
+        assert_eq!(env.events().all().events().len(), event_count);
+
+        let mut corrupted_record = new_record;
+        corrupted_record.supersedes = None;
+        env.as_contract(&contract_id, || {
+            storage::set_evidence(&env, &corrupted_record);
+        });
+        let before = supersession_chain_ttls(&env, &contract_id, &old_id, 1);
+        let event_count = env.events().all().events().len();
+        assert_eq!(
+            client.try_maintain_supersession_chain(&old_id),
+            Err(Ok(ContractError::InvalidSupersession))
+        );
+        assert_eq!(
+            supersession_chain_ttls(&env, &contract_id, &old_id, 1),
+            before
+        );
+        assert_eq!(env.events().all().events().len(), event_count);
+    }
+
+    #[test]
+    fn maintenance_of_supersession_chain_requires_admin_auth() {
+        let (env, contract_id, admin) = setup();
+        let publisher = register_publisher(&env, &contract_id, &admin);
+        let client = EvidenceRegistryClient::new(&env, &contract_id);
+        let old_id = client.publish_evidence(&valid_input(&env, &publisher));
+        let mut replacement = valid_input(&env, &publisher);
+        replacement.report_hash = BytesN::from_array(&env, &[22; 32]);
+        client.supersede_evidence(&old_id, &replacement, &publisher);
+        let before = supersession_chain_ttls(&env, &contract_id, &old_id, 1);
+        let event_count = env.events().all().events().len();
+        env.set_auths(&[]);
+
+        assert!(client.try_maintain_supersession_chain(&old_id).is_err());
+        assert_eq!(
+            supersession_chain_ttls(&env, &contract_id, &old_id, 1),
+            before
+        );
+        assert_eq!(env.events().all().events().len(), event_count);
+    }
+
+    #[test]
+    fn maintenance_supersession_chain_respects_length_boundary() {
+        for chain_length in [23_u8, 24] {
+            let (env, contract_id, admin) = setup();
+            let publisher = register_publisher(&env, &contract_id, &admin);
+            let client = EvidenceRegistryClient::new(&env, &contract_id);
+            let mut first = valid_input(&env, &publisher);
+            first.report_hash = BytesN::from_array(&env, &[1; 32]);
+            let first_id = client.publish_evidence(&first);
+            let mut current_id = first_id.clone();
+
+            for marker in 2..=chain_length + 1 {
+                let mut replacement = valid_input(&env, &publisher);
+                replacement.report_hash = BytesN::from_array(&env, &[marker; 32]);
+                current_id = client.supersede_evidence(&current_id, &replacement, &publisher);
+            }
+
+            if chain_length == 23 {
+                client.maintain_supersession_chain(&first_id);
+            } else {
+                let before = supersession_chain_ttls(&env, &contract_id, &first_id, chain_length);
+                let event_count = env.events().all().events().len();
+
+                assert_eq!(
+                    client.try_maintain_supersession_chain(&first_id),
+                    Err(Ok(ContractError::InvalidSupersession))
+                );
+                assert_eq!(
+                    supersession_chain_ttls(&env, &contract_id, &first_id, chain_length),
+                    before
+                );
+                assert_eq!(env.events().all().events().len(), event_count);
+            }
+        }
     }
 }
