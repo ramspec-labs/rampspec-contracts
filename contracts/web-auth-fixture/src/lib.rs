@@ -124,6 +124,9 @@ struct ParsedArgs {
 }
 
 fn parse_args(env: &Env, args: &Map<Symbol, String>) -> Result<ParsedArgs, WebAuthError> {
+    if args.len() > 7 {
+        return Err(WebAuthError::MalformedArgument);
+    }
     let account = required(args, env, "account")?;
     let home_domain = required(args, env, "home_domain")?;
     let web_auth_domain = required(args, env, "web_auth_domain")?;
@@ -493,6 +496,29 @@ mod tests {
         wrong_account_kind.set(Symbol::new(&env, "account"), server.to_string());
         assert_eq!(
             client.try_web_auth_verify(&wrong_account_kind),
+            Err(Ok(WebAuthError::MalformedArgument))
+        );
+    }
+
+    #[test]
+    fn rejects_excess_argument_map_entries_before_parsing() {
+        let (env, contract_id, account, server) = setup(FixtureMode::Accept);
+        let client = WebAuthFixtureClient::new(&env, &contract_id);
+        let mut excess_args = args(&env, &account, &server, None, "nonce");
+        excess_args.set(
+            Symbol::new(&env, "extra_field1"),
+            String::from_str(&env, "value"),
+        );
+        excess_args.set(
+            Symbol::new(&env, "extra_field2"),
+            String::from_str(&env, "value"),
+        );
+        excess_args.set(
+            Symbol::new(&env, "extra_field3"),
+            String::from_str(&env, "value"),
+        );
+        assert_eq!(
+            client.try_web_auth_verify(&excess_args),
             Err(Ok(WebAuthError::MalformedArgument))
         );
     }

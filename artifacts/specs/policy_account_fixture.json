@@ -156,6 +156,29 @@
   {
     "function_v0": {
       "doc": "",
+      "inputs": [],
+      "name": "policy_commitment",
+      "outputs": [
+        {
+          "result": {
+            "error_type": {
+              "udt": {
+                "name": "PolicyError"
+              }
+            },
+            "ok_type": {
+              "bytes_n": {
+                "n": 32
+              }
+            }
+          }
+        }
+      ]
+    }
+  },
+  {
+    "function_v0": {
+      "doc": "",
       "inputs": [
         {
           "doc": "",

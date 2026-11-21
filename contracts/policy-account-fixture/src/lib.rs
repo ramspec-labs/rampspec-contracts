@@ -390,6 +390,11 @@ impl PolicyAccountFixture {
             .unwrap_or(0))
     }
 
+    pub fn policy_commitment(env: Env) -> Result<BytesN<32>, PolicyError> {
+        let config = read_config(&env)?;
+        Ok(env.crypto().sha256(&config.clone().to_xdr(&env)).to_bytes())
+    }
+
     #[must_use]
     pub fn schema_version(_env: Env) -> u32 {
         rampspec_shared_types::SCHEMA_VERSION
@@ -1301,6 +1306,439 @@ mod tests {
     }
 
     #[test]
+    fn ed25519_mode_rejects_passkey_signatures_before_replay() {
+        let env = Env::default();
+        let first = key(1);
+        let signers = vec![&env, signer(&env, &first, 1)];
+        let passkey = passkey_key(3);
+        env.mock_all_auths();
+        let contract_id = env.register(PolicyAccountFixture, ());
+        let admin = Address::generate(&env);
+        let client = PolicyAccountFixtureClient::new(&env, &contract_id);
+        client.initialize(&admin, &signers, &1);
+
+        let payload = [26; 32];
+        let passkey_sig = passkey_signature(&env, &passkey, &payload);
+
+        let config_before = client.config();
+        let events_before = env.events().all().events().len();
+
+        assert_eq!(
+            check(&env, &contract_id, &payload, &vec![&env, passkey_sig]),
+            Err(Ok(PolicyError::WrongSignatureMode))
+        );
+
+        assert_eq!(client.config(), config_before);
+        assert_eq!(env.events().all().events().len(), events_before);
+
+        let ed25519_sig = signature(&env, &first, &payload);
+        assert_eq!(
+            check(&env, &contract_id, &payload, &vec![&env, ed25519_sig]),
+            Ok(())
+        );
+    }
+
+    #[test]
+    fn ed25519_mode_rejects_mixed_signature_vectors() {
+        let env = Env::default();
+        let first = key(1);
+        let second = key(2);
+        let passkey = passkey_key(3);
+        let signers = vec![&env, signer(&env, &first, 1), signer(&env, &second, 1)];
+        env.mock_all_auths();
+        let contract_id = env.register(PolicyAccountFixture, ());
+        let admin = Address::generate(&env);
+        let client = PolicyAccountFixtureClient::new(&env, &contract_id);
+        client.initialize(&admin, &signers, &1);
+
+        let payload = [27; 32];
+        let ed25519_sig = signature(&env, &first, &payload);
+        let ed25519_sig2 = signature(&env, &second, &payload);
+        let passkey_sig = passkey_signature(&env, &passkey, &payload);
+
+        let config_before = client.config();
+        let events_before = env.events().all().events().len();
+
+        for mixed in [
+            vec![&env, ed25519_sig.clone(), passkey_sig.clone()],
+            vec![&env, passkey_sig.clone(), ed25519_sig.clone()],
+            vec![
+                &env,
+                ed25519_sig.clone(),
+                ed25519_sig2.clone(),
+                passkey_sig.clone(),
+            ],
+            vec![
+                &env,
+                passkey_sig.clone(),
+                passkey_sig.clone(),
+                ed25519_sig.clone(),
+            ],
+        ] {
+            assert_eq!(
+                check(&env, &contract_id, &payload, &mixed),
+                Err(Ok(PolicyError::WrongSignatureMode))
+            );
+            assert_eq!(client.config(), config_before);
+            assert_eq!(env.events().all().events().len(), events_before);
+        }
+
+        assert_eq!(
+            check(&env, &contract_id, &payload, &vec![&env, ed25519_sig]),
+            Ok(())
+        );
+    }
+
+    #[test]
+    fn passkey_mode_rejects_ed25519_signatures_before_replay() {
+        let env = Env::default();
+        let bootstrap = key(1);
+        let bootstrap_signers = vec![&env, signer(&env, &bootstrap, 1)];
+        let passkey = passkey_key(3);
+        let passkeys = vec![&env, passkey_signer(&env, &passkey, 1)];
+        env.mock_all_auths();
+        let contract_id = env.register(PolicyAccountFixture, ());
+        let admin = Address::generate(&env);
+        let client = PolicyAccountFixtureClient::new(&env, &contract_id);
+        client.initialize(&admin, &bootstrap_signers, &1);
+        client.set_passkeys(&passkeys, &1);
+
+        let payload = [28; 32];
+        let ed25519_sig = signature(&env, &bootstrap, &payload);
+
+        let config_before = client.config();
+        let events_before = env.events().all().events().len();
+
+        assert_eq!(
+            check(&env, &contract_id, &payload, &vec![&env, ed25519_sig]),
+            Err(Ok(PolicyError::WrongSignatureMode))
+        );
+
+        assert_eq!(client.config(), config_before);
+        assert_eq!(env.events().all().events().len(), events_before);
+
+        let passkey_sig = passkey_signature(&env, &passkey, &payload);
+        assert_eq!(
+            check(&env, &contract_id, &payload, &vec![&env, passkey_sig]),
+            Ok(())
+        );
+    }
+
+    #[test]
+    fn passkey_mode_rejects_mixed_signature_vectors() {
+        let env = Env::default();
+        let bootstrap = key(1);
+        let second = key(2);
+        let passkey = passkey_key(3);
+        let second_passkey = passkey_key(4);
+        let bootstrap_signers = vec![&env, signer(&env, &bootstrap, 1)];
+        let passkeys = vec![
+            &env,
+            passkey_signer(&env, &passkey, 1),
+            passkey_signer(&env, &second_passkey, 1),
+        ];
+        env.mock_all_auths();
+        let contract_id = env.register(PolicyAccountFixture, ());
+        let admin = Address::generate(&env);
+        let client = PolicyAccountFixtureClient::new(&env, &contract_id);
+        client.initialize(&admin, &bootstrap_signers, &1);
+        client.set_passkeys(&passkeys, &2);
+
+        let payload = [29; 32];
+        let ed25519_sig = signature(&env, &bootstrap, &payload);
+        let ed25519_sig2 = signature(&env, &second, &payload);
+        let passkey_sig = passkey_signature(&env, &passkey, &payload);
+        let passkey_sig2 = passkey_signature(&env, &second_passkey, &payload);
+
+        let config_before = client.config();
+        let events_before = env.events().all().events().len();
+
+        for mixed in [
+            vec![&env, ed25519_sig.clone(), passkey_sig.clone()],
+            vec![&env, passkey_sig.clone(), ed25519_sig.clone()],
+            vec![
+                &env,
+                passkey_sig.clone(),
+                passkey_sig2.clone(),
+                ed25519_sig.clone(),
+            ],
+            vec![
+                &env,
+                ed25519_sig.clone(),
+                ed25519_sig2.clone(),
+                passkey_sig.clone(),
+            ],
+        ] {
+            assert_eq!(
+                check(&env, &contract_id, &payload, &mixed),
+                Err(Ok(PolicyError::WrongSignatureMode))
+            );
+            assert_eq!(client.config(), config_before);
+            assert_eq!(env.events().all().events().len(), events_before);
+        }
+
+        assert_eq!(
+            check(
+                &env,
+                &contract_id,
+                &payload,
+                &vec![&env, passkey_sig.clone(), passkey_sig2.clone()]
+            ),
+            Ok(())
+        );
+    }
+
+    #[test]
+    fn wrong_mode_rejection_leaves_replay_storage_untouched() {
+        let env = Env::default();
+        let first = key(1);
+        let passkey = passkey_key(3);
+        let signers = vec![&env, signer(&env, &first, 1)];
+        env.mock_all_auths();
+        let contract_id = env.register(PolicyAccountFixture, ());
+        let admin = Address::generate(&env);
+        let client = PolicyAccountFixtureClient::new(&env, &contract_id);
+        client.initialize(&admin, &signers, &1);
+
+        let payload = [30; 32];
+        let ed25519_sig = signature(&env, &first, &payload);
+        let passkey_sig = passkey_signature(&env, &passkey, &payload);
+
+        assert_eq!(
+            check(
+                &env,
+                &contract_id,
+                &payload,
+                &vec![&env, passkey_sig.clone()]
+            ),
+            Err(Ok(PolicyError::WrongSignatureMode))
+        );
+
+        assert_eq!(
+            check(
+                &env,
+                &contract_id,
+                &payload,
+                &vec![&env, ed25519_sig.clone()]
+            ),
+            Ok(())
+        );
+
+        assert_eq!(
+            check(&env, &contract_id, &payload, &vec![&env, ed25519_sig]),
+            Err(Ok(PolicyError::Replay))
+        );
+
+        let payload2 = [31; 32];
+        let passkey_sig2 = passkey_signature(&env, &passkey, &payload2);
+        let passkeys = vec![&env, passkey_signer(&env, &passkey, 1)];
+        client.set_passkeys(&passkeys, &1);
+        assert_eq!(
+            check(
+                &env,
+                &contract_id,
+                &payload2,
+                &vec![&env, passkey_sig2.clone()]
+            ),
+            Ok(())
+        );
+
+        assert_eq!(
+            check(&env, &contract_id, &payload2, &vec![&env, passkey_sig2]),
+            Err(Ok(PolicyError::Replay))
+        );
+    }
+
+    #[test]
+    fn wrong_mode_rejection_produces_no_ghost_events_or_state() {
+        let env = Env::default();
+        let first = key(1);
+        let passkey = passkey_key(3);
+        let signers = vec![&env, signer(&env, &first, 1)];
+        env.mock_all_auths();
+        let contract_id = env.register(PolicyAccountFixture, ());
+        let admin = Address::generate(&env);
+        let client = PolicyAccountFixtureClient::new(&env, &contract_id);
+        client.initialize(&admin, &signers, &1);
+
+        let payload = [32; 32];
+        let passkey_sig = passkey_signature(&env, &passkey, &payload);
+
+        let initial_events = env.events().all().events().len();
+        let config_before = client.config();
+
+        for _ in 0..5 {
+            assert_eq!(
+                check(
+                    &env,
+                    &contract_id,
+                    &payload,
+                    &vec![&env, passkey_sig.clone()]
+                ),
+                Err(Ok(PolicyError::WrongSignatureMode))
+            );
+            assert_eq!(client.config(), config_before);
+            let current_events = env.events().all().events().len();
+            assert!(
+                current_events <= initial_events,
+                "event count increased: {current_events} > {initial_events}"
+            );
+        }
+
+        let ed25519_sig = signature(&env, &first, &payload);
+        assert_eq!(
+            check(&env, &contract_id, &payload, &vec![&env, ed25519_sig]),
+            Ok(())
+        );
+        let final_events = env.events().all().events().len();
+        assert!(
+            final_events <= initial_events,
+            "event count increased: {final_events} > {initial_events}"
+        );
+    }
+
+    #[test]
+    fn wrong_mode_boundary_single_wrong_signature_in_valid_batch() {
+        let env = Env::default();
+        let first = key(1);
+        let second = key(2);
+        let passkey = passkey_key(3);
+        let signers = vec![&env, signer(&env, &first, 1), signer(&env, &second, 1)];
+        env.mock_all_auths();
+        let contract_id = env.register(PolicyAccountFixture, ());
+        let admin = Address::generate(&env);
+        let client = PolicyAccountFixtureClient::new(&env, &contract_id);
+        client.initialize(&admin, &signers, &2);
+
+        let payload = [33; 32];
+        let sig1 = signature(&env, &first, &payload);
+        let sig2 = signature(&env, &second, &payload);
+        let wrong_sig = passkey_signature(&env, &passkey, &payload);
+
+        assert_eq!(
+            check(
+                &env,
+                &contract_id,
+                &payload,
+                &vec![&env, sig1.clone(), wrong_sig.clone()]
+            ),
+            Err(Ok(PolicyError::WrongSignatureMode))
+        );
+        assert_eq!(
+            check(
+                &env,
+                &contract_id,
+                &payload,
+                &vec![&env, wrong_sig, sig2.clone()]
+            ),
+            Err(Ok(PolicyError::WrongSignatureMode))
+        );
+        assert_eq!(
+            check(&env, &contract_id, &payload, &vec![&env, sig1, sig2]),
+            Ok(())
+        );
+    }
+
+    #[test]
+    fn wrong_mode_with_required_signer_control_does_not_leak() {
+        let env = Env::default();
+        let first = key(1);
+        let second = key(2);
+        let passkey = passkey_key(3);
+        let signers = vec![&env, signer(&env, &first, 1), signer(&env, &second, 1)];
+        env.mock_all_auths();
+        let contract_id = env.register(PolicyAccountFixture, ());
+        let admin = Address::generate(&env);
+        let client = PolicyAccountFixtureClient::new(&env, &contract_id);
+        client.initialize(&admin, &signers, &1);
+
+        let mut controls = controls();
+        controls.additional_signer =
+            Some(BytesN::from_array(&env, second.verifying_key().as_bytes()));
+        client.set_controls(&controls);
+
+        let payload = [34; 32];
+        let first_sig = signature(&env, &first, &payload);
+        let passkey_sig = passkey_signature(&env, &passkey, &payload);
+
+        assert_eq!(
+            check(&env, &contract_id, &payload, &vec![&env, passkey_sig]),
+            Err(Ok(PolicyError::WrongSignatureMode))
+        );
+
+        assert_eq!(
+            check(&env, &contract_id, &payload, &vec![&env, first_sig.clone()]),
+            Err(Ok(PolicyError::RequiredSignerMissing))
+        );
+
+        let second_sig = signature(&env, &second, &payload);
+        assert_eq!(
+            check(
+                &env,
+                &contract_id,
+                &payload,
+                &vec![&env, first_sig, second_sig]
+            ),
+            Ok(())
+        );
+    }
+
+    #[test]
+    fn mode_switch_preserves_replay_isolation() {
+        let env = Env::default();
+        let bootstrap = key(1);
+        let passkey = passkey_key(3);
+        let bootstrap_signers = vec![&env, signer(&env, &bootstrap, 1)];
+        env.mock_all_auths();
+        let contract_id = env.register(PolicyAccountFixture, ());
+        let admin = Address::generate(&env);
+        let client = PolicyAccountFixtureClient::new(&env, &contract_id);
+        client.initialize(&admin, &bootstrap_signers, &1);
+
+        let payload1 = [35; 32];
+        let ed25519_sig = signature(&env, &bootstrap, &payload1);
+        assert_eq!(
+            check(
+                &env,
+                &contract_id,
+                &payload1,
+                &vec![&env, ed25519_sig.clone()]
+            ),
+            Ok(())
+        );
+        assert_eq!(
+            check(&env, &contract_id, &payload1, &vec![&env, ed25519_sig]),
+            Err(Ok(PolicyError::Replay))
+        );
+
+        let passkeys = vec![&env, passkey_signer(&env, &passkey, 1)];
+        client.set_passkeys(&passkeys, &1);
+
+        let payload2 = [36; 32];
+        let passkey_sig = passkey_signature(&env, &passkey, &payload2);
+        assert_eq!(
+            check(
+                &env,
+                &contract_id,
+                &payload2,
+                &vec![&env, passkey_sig.clone()]
+            ),
+            Ok(())
+        );
+        assert_eq!(
+            check(&env, &contract_id, &payload2, &vec![&env, passkey_sig]),
+            Err(Ok(PolicyError::Replay))
+        );
+
+        let payload3 = [37; 32];
+        let passkey_sig2 = passkey_signature(&env, &passkey, &payload3);
+        assert_eq!(
+            check(&env, &contract_id, &payload3, &vec![&env, passkey_sig2]),
+            Ok(())
+        );
+    }
+
+    #[test]
     fn configuration_events_are_versioned_atomic_and_idempotent() {
         let env = Env::default();
         env.mock_all_auths();
@@ -1335,13 +1773,75 @@ mod tests {
     }
 
     fn valid_weight_policy(weights: &[u32], threshold: u32) -> bool {
-        if threshold == 0 || weights.iter().any(|weight| *weight == 0) {
+        if threshold == 0 || weights.contains(&0) {
             return false;
         }
         weights
             .iter()
             .try_fold(0_u32, |total, weight| total.checked_add(*weight))
             .is_some_and(|total| threshold <= total)
+    }
+
+    #[test]
+    fn ed25519_max_signers_verification_stays_within_budget() {
+        let env = Env::default();
+        env.mock_all_auths();
+        let contract_id = env.register(PolicyAccountFixture, ());
+        let admin = Address::generate(&env);
+        let mut signers = Vec::new(&env);
+        let mut signatures = Vec::new(&env);
+        let payload = [99; 32];
+        for seed in 1..=MAX_SIGNERS {
+            let signing_key = key(u8::try_from(seed).unwrap());
+            signers.push_back(signer(&env, &signing_key, 1));
+            signatures.push_back(signature(&env, &signing_key, &payload));
+        }
+        let client = PolicyAccountFixtureClient::new(&env, &contract_id);
+        client.initialize(&admin, &signers, &MAX_SIGNERS);
+
+        env.cost_estimate().budget().reset_tracker();
+        assert_eq!(check(&env, &contract_id, &payload, &signatures), Ok(()));
+
+        let budget = env.cost_estimate().budget();
+        let cpu = budget.cpu_instruction_cost();
+        let memory = budget.memory_bytes_cost();
+        assert!(cpu <= 30_000_000, "CPU cost {cpu} exceeds 30_000_000");
+        assert!(
+            memory <= 24_000_000,
+            "memory cost {memory} exceeds 24_000_000"
+        );
+    }
+
+    #[test]
+    fn passkey_max_signers_verification_stays_within_budget() {
+        let env = Env::default();
+        env.mock_all_auths();
+        let contract_id = env.register(PolicyAccountFixture, ());
+        let admin = Address::generate(&env);
+        let bootstrap = key(1);
+        let mut passkey_signers = Vec::new(&env);
+        let mut signatures = Vec::new(&env);
+        let payload = [100; 32];
+        for seed in 1..=MAX_SIGNERS {
+            let signing_key = passkey_key(u8::try_from(seed).unwrap());
+            passkey_signers.push_back(passkey_signer(&env, &signing_key, 1));
+            signatures.push_back(passkey_signature(&env, &signing_key, &payload));
+        }
+        let client = PolicyAccountFixtureClient::new(&env, &contract_id);
+        client.initialize(&admin, &vec![&env, signer(&env, &bootstrap, 1)], &1);
+        client.set_passkeys(&passkey_signers, &MAX_SIGNERS);
+
+        env.cost_estimate().budget().reset_tracker();
+        assert_eq!(check(&env, &contract_id, &payload, &signatures), Ok(()));
+
+        let budget = env.cost_estimate().budget();
+        let cpu = budget.cpu_instruction_cost();
+        let memory = budget.memory_bytes_cost();
+        assert!(cpu <= 50_000_000, "CPU cost {cpu} exceeds 50_000_000");
+        assert!(
+            memory <= 30_000_000,
+            "memory cost {memory} exceeds 30_000_000"
+        );
     }
 
     proptest! {
