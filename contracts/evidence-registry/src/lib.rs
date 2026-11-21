@@ -425,7 +425,12 @@ impl EvidenceRegistry {
         if new_admin == current_admin {
             return Err(ContractError::Unauthorized);
         }
+        let deadline = env
+            .ledger()
+            .sequence()
+            .saturating_add(storage::ADMIN_PROPOSAL_TTL_LEDGERS);
         storage::set_pending_admin(&env, &new_admin);
+        storage::set_pending_admin_deadline(&env, deadline);
         AdminProposed {
             current_admin,
             pending_admin: new_admin,
@@ -436,6 +441,11 @@ impl EvidenceRegistry {
 
     pub fn accept_admin(env: Env) -> Result<(), ContractError> {
         let new_admin = storage::pending_admin(&env).ok_or(ContractError::AdminProposalMissing)?;
+        let deadline = storage::pending_admin_deadline(&env)
+            .ok_or(ContractError::AdminProposalMissing)?;
+        if env.ledger().sequence() > deadline {
+            return Err(ContractError::AdminProposalExpired);
+        }
         new_admin.require_auth();
         let old_admin = storage::admin(&env)?;
         storage::set_admin(&env, &new_admin);
@@ -1669,6 +1679,207 @@ mod tests {
         assert_eq!(
             client.try_maintain_evidence(&id),
             Err(Ok(ContractError::EvidenceNotFound))
+        );
+    }
+
+    // ── Admin proposal expiry ────────────────────────────────────────────────
+
+    #[test]
+    fn proposal_stores_deadline_and_active_acceptance_succeeds() {
+        let (env, contract_id, admin) = setup();
+        let client = EvidenceRegistryClient::new(&env, &contract_id);
+        client.initialize(&admin, &SCHEMA_VERSION);
+        let candidate = Address::generate(&env);
+
+        env.ledger().set_sequence_number(1_000);
+        client.propose_admin(&candidate);
+
+        let deadline = env.as_contract(&contract_id, || {
+            storage::pending_admin_deadline(&env).unwrap()
+        });
+        assert_eq!(deadline, 1_000 + storage::ADMIN_PROPOSAL_TTL_LEDGERS);
+
+        // Accept one ledger before expiry (still valid).
+        env.ledger().set_sequence_number(deadline - 1);
+        client.accept_admin();
+        assert_eq!(
+            env.as_contract(&contract_id, || storage::admin(&env).unwrap()),
+            candidate
+        );
+        assert_eq!(
+            env.as_contract(&contract_id, || storage::pending_admin_deadline(&env)),
+            None
+        );
+    }
+
+    #[test]
+    fn acceptance_at_exact_deadline_ledger_still_succeeds() {
+        let (env, contract_id, admin) = setup();
+        let client = EvidenceRegistryClient::new(&env, &contract_id);
+        client.initialize(&admin, &SCHEMA_VERSION);
+        let candidate = Address::generate(&env);
+
+        env.ledger().set_sequence_number(500);
+        client.propose_admin(&candidate);
+        let deadline = 500 + storage::ADMIN_PROPOSAL_TTL_LEDGERS;
+
+        // Accept on the exact deadline ledger (sequence == deadline, not >, so valid).
+        env.ledger().set_sequence_number(deadline);
+        client.accept_admin();
+        assert_eq!(
+            env.as_contract(&contract_id, || storage::admin(&env).unwrap()),
+            candidate
+        );
+    }
+
+    #[test]
+    fn expired_proposal_cannot_be_accepted_and_produces_no_state_or_event_change() {
+        let (env, contract_id, admin) = setup();
+        let client = EvidenceRegistryClient::new(&env, &contract_id);
+        client.initialize(&admin, &SCHEMA_VERSION);
+        let candidate = Address::generate(&env);
+
+        env.ledger().set_sequence_number(100);
+        client.propose_admin(&candidate);
+        let deadline = 100 + storage::ADMIN_PROPOSAL_TTL_LEDGERS;
+
+        let state_before = env.as_contract(&contract_id, || {
+            (
+                storage::admin(&env).unwrap(),
+                storage::pending_admin(&env),
+                storage::pending_admin_deadline(&env),
+                env.storage().instance().get_ttl(),
+            )
+        });
+
+        // Advance one ledger past the deadline.
+        env.ledger().set_sequence_number(deadline + 1);
+
+        assert_eq!(
+            client.try_accept_admin(),
+            Err(Ok(ContractError::AdminProposalExpired))
+        );
+        assert_eq!(env.events().all().events().len(), 0);
+
+        let state_after = env.as_contract(&contract_id, || {
+            (
+                storage::admin(&env).unwrap(),
+                storage::pending_admin(&env),
+                storage::pending_admin_deadline(&env),
+                env.storage().instance().get_ttl(),
+            )
+        });
+        // Admin unchanged; pending proposal slot unchanged (caller must cancel or repropose).
+        assert_eq!(state_after.0, state_before.0);
+        assert_eq!(state_after.1, state_before.1);
+        assert_eq!(state_after.2, state_before.2);
+    }
+
+    #[test]
+    fn accepting_a_proposal_with_no_deadline_key_returns_missing() {
+        // Simulates a stale proposal written before this feature was deployed.
+        let (env, contract_id, admin) = setup();
+        let client = EvidenceRegistryClient::new(&env, &contract_id);
+        client.initialize(&admin, &SCHEMA_VERSION);
+        let candidate = Address::generate(&env);
+        // Write pending admin without a deadline (legacy path simulation).
+        env.as_contract(&contract_id, || {
+            storage::set_pending_admin(&env, &candidate);
+            env.storage()
+                .instance()
+                .remove(&InstanceKeyV1::PendingAdminDeadline);
+        });
+
+        assert_eq!(
+            client.try_accept_admin(),
+            Err(Ok(ContractError::AdminProposalMissing))
+        );
+        assert_eq!(env.events().all().events().len(), 0);
+    }
+
+    #[test]
+    fn reproposal_resets_deadline_and_expired_original_cannot_be_accepted() {
+        let (env, contract_id, admin) = setup();
+        let client = EvidenceRegistryClient::new(&env, &contract_id);
+        client.initialize(&admin, &SCHEMA_VERSION);
+        let first = Address::generate(&env);
+        let second = Address::generate(&env);
+
+        env.ledger().set_sequence_number(0);
+        client.propose_admin(&first);
+        let first_deadline = storage::ADMIN_PROPOSAL_TTL_LEDGERS;
+
+        // Let the first proposal expire then issue a fresh proposal.
+        env.ledger().set_sequence_number(first_deadline + 1);
+        client.propose_admin(&second);
+
+        let new_deadline = env.as_contract(&contract_id, || {
+            storage::pending_admin_deadline(&env).unwrap()
+        });
+        assert_eq!(new_deadline, first_deadline + 1 + storage::ADMIN_PROPOSAL_TTL_LEDGERS);
+
+        // `first` can no longer accept because the proposal slot now names `second`.
+        assert_eq!(
+            env.as_contract(&contract_id, || storage::pending_admin(&env)),
+            Some(second.clone())
+        );
+        // `second` can accept (within window).
+        client.accept_admin();
+        assert_eq!(
+            env.as_contract(&contract_id, || storage::admin(&env).unwrap()),
+            second
+        );
+    }
+
+    #[test]
+    fn cancellation_clears_deadline_and_expired_slot_cannot_be_accepted() {
+        let (env, contract_id, admin) = setup();
+        let client = EvidenceRegistryClient::new(&env, &contract_id);
+        client.initialize(&admin, &SCHEMA_VERSION);
+        let candidate = Address::generate(&env);
+
+        env.ledger().set_sequence_number(0);
+        client.propose_admin(&candidate);
+
+        client.cancel_admin_transfer();
+
+        env.as_contract(&contract_id, || {
+            assert_eq!(storage::pending_admin(&env), None);
+            assert_eq!(storage::pending_admin_deadline(&env), None);
+        });
+        assert_eq!(
+            client.try_accept_admin(),
+            Err(Ok(ContractError::AdminProposalMissing))
+        );
+    }
+
+    #[test]
+    fn expiry_check_does_not_affect_pause_revoke_or_upgrade_paths() {
+        // Confirm that expiry of an admin proposal does not block other admin
+        // operations that do not go through accept_admin.
+        let (env, contract_id, admin) = setup();
+        let publisher = register_publisher(&env, &contract_id, &admin);
+        let client = EvidenceRegistryClient::new(&env, &contract_id);
+        let id = client.publish_evidence(&valid_input(&env, &publisher));
+
+        env.ledger().set_sequence_number(0);
+        let candidate = Address::generate(&env);
+        client.propose_admin(&candidate);
+        let deadline = storage::ADMIN_PROPOSAL_TTL_LEDGERS;
+
+        // Let the proposal expire.
+        env.ledger().set_sequence_number(deadline + 1);
+        env.as_contract(&contract_id, || storage::set_paused(&env, false));
+
+        // Admin can still pause, revoke, and cancel even with an expired proposal.
+        client.set_paused(&true);
+        client.revoke_evidence(&id, &BytesN::from_array(&env, &[31; 32]), &admin);
+        client.set_paused(&false);
+        client.cancel_admin_transfer();
+
+        assert_eq!(
+            env.as_contract(&contract_id, || storage::pending_admin(&env)),
+            None
         );
     }
 }

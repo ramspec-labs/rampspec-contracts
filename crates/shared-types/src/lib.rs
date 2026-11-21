@@ -30,6 +30,7 @@ pub enum ContractError {
     InvalidSupersession = 13,
     AdminProposalMissing = 14,
     UpgradeNotAllowed = 15,
+    AdminProposalExpired = 16,
 }
 
 #[contracttype]
@@ -116,6 +117,7 @@ pub struct AttestorRecord {
 pub enum InstanceKeyV1 {
     Admin,
     PendingAdmin,
+    PendingAdminDeadline,
     Paused,
     SchemaVersion,
     CurrentWasmHash,
@@ -171,6 +173,7 @@ mod tests {
         let instance_keys = [
             InstanceKeyV1::Admin.to_xdr(&env),
             InstanceKeyV1::PendingAdmin.to_xdr(&env),
+            InstanceKeyV1::PendingAdminDeadline.to_xdr(&env),
             InstanceKeyV1::Paused.to_xdr(&env),
             InstanceKeyV1::SchemaVersion.to_xdr(&env),
             InstanceKeyV1::CurrentWasmHash.to_xdr(&env),
@@ -201,6 +204,7 @@ mod tests {
             (ContractError::InvalidSupersession, 13),
             (ContractError::AdminProposalMissing, 14),
             (ContractError::UpgradeNotAllowed, 15),
+            (ContractError::AdminProposalExpired, 16),
         ];
 
         for (error, expected) in cases {

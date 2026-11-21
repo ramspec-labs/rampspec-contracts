@@ -4,7 +4,7 @@ Storage layout version: `1`.
 
 ## Instance State
 
-The `InstanceKeyV1` namespace stores one administrator address, an optional pending administrator, the pause flag, the schema version, and the current WASM hash. These values share the contract instance lifetime and are never used as evidence lookup keys.
+The `InstanceKeyV1` namespace stores one administrator address, an optional pending administrator, an optional pending administrator deadline (a `u32` ledger sequence number written atomically with every proposal and cleared on acceptance or cancellation), the pause flag, the schema version, and the current WASM hash. These values share the contract instance lifetime and are never used as evidence lookup keys.
 
 ## Persistent State
 
@@ -13,6 +13,10 @@ The `PersistentKeyV1` namespace stores attestors by address, evidence by its 32-
 A successful supersession commits the terminal old record, active replacement record, old-index removal, replacement-index insertion, and forward link before emitting exactly one `evidence_superseded` event. Its indexed topics are the old and new identifiers and its data contains the authorizer. Publisher- and administrator-authorized replacements use the same order. Any rejected replacement rolls the transaction back and emits no event.
 
 Revocation removes the active lookup only when it still points to the record being revoked, so a conflicting record is never erased. Administrator-authorized evidence maintenance recreates a missing active lookup for an active record and rejects a conflicting lookup before extending any TTL.
+
+## Administrator Proposal Lifetime
+
+A pending administrator proposal expires after `ADMIN_PROPOSAL_TTL_LEDGERS` ledgers (≈1 day at 5 s/ledger on Mainnet). The deadline ledger is stored in `InstanceKeyV1::PendingAdminDeadline` and written atomically with `InstanceKeyV1::PendingAdmin` on every `propose_admin` call. `accept_admin` checks `current_ledger > deadline` and returns `AdminProposalExpired` without mutating any state or emitting an event when the check fails. Cancellation or a fresh proposal both clear the deadline key. A missing deadline key returns `AdminProposalMissing` to guard against proposals written before this feature was deployed.
 
 ## Compatibility Policy
 
