@@ -7,6 +7,8 @@ pub(crate) const INSTANCE_TTL_THRESHOLD: u32 = 103_680;
 pub(crate) const INSTANCE_TTL_TARGET: u32 = 2_073_600;
 pub(crate) const PERSISTENT_TTL_THRESHOLD: u32 = 518_400;
 pub(crate) const PERSISTENT_TTL_TARGET: u32 = 3_110_400;
+/// Proposal lifetime in ledgers (~1 day at 5 s/ledger on Mainnet).
+pub(crate) const ADMIN_PROPOSAL_TTL_LEDGERS: u32 = 17_280;
 
 pub(crate) fn extend_instance_ttl(env: &Env) {
     env.storage()
@@ -58,6 +60,21 @@ pub(crate) fn clear_pending_admin(env: &Env) {
     env.storage()
         .instance()
         .remove(&InstanceKeyV1::PendingAdmin);
+    env.storage()
+        .instance()
+        .remove(&InstanceKeyV1::PendingAdminDeadline);
+}
+
+pub(crate) fn pending_admin_deadline(env: &Env) -> Option<u32> {
+    env.storage()
+        .instance()
+        .get(&InstanceKeyV1::PendingAdminDeadline)
+}
+
+pub(crate) fn set_pending_admin_deadline(env: &Env, deadline: u32) {
+    env.storage()
+        .instance()
+        .set(&InstanceKeyV1::PendingAdminDeadline, &deadline);
 }
 
 pub(crate) fn current_wasm_hash(env: &Env) -> Option<BytesN<32>> {
