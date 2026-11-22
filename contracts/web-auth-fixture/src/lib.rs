@@ -94,6 +94,20 @@ fn validate_text(value: &String, max_length: u32) -> Result<(), WebAuthError> {
     Ok(())
 }
 
+fn validate_domain(value: &String, max_length: u32) -> Result<(), WebAuthError> {
+    validate_text(value, max_length)?;
+    let bytes = value.to_bytes();
+    for b in bytes.iter() {
+        if b > 127 {
+            return Err(WebAuthError::MalformedArgument);
+        }
+    }
+    if bytes.last() == Some(b'.') {
+        return Err(WebAuthError::MalformedArgument);
+    }
+    Ok(())
+}
+
 fn validate_address(value: &String, prefix: u8) -> Result<(), WebAuthError> {
     let bytes = value.to_bytes();
     if bytes.len() != 56 || bytes.get(0).unwrap() != prefix {
@@ -134,15 +148,15 @@ fn parse_args(env: &Env, args: &Map<Symbol, String>) -> Result<ParsedArgs, WebAu
 
     validate_address(&account, b'C')?;
     validate_address(&server, b'G')?;
-    validate_text(&home_domain, 253)?;
-    validate_text(&web_auth_domain, 253)?;
+    validate_domain(&home_domain, 253)?;
+    validate_domain(&web_auth_domain, 253)?;
     validate_text(&nonce, 128)?;
 
     if client_domain.is_some() != client_domain_account.is_some() {
         return Err(WebAuthError::MalformedArgument);
     }
     if let Some(domain) = client_domain {
-        validate_text(&domain, 253)?;
+        validate_domain(&domain, 253)?;
     }
     if let Some(domain_account) = &client_domain_account {
         validate_address(domain_account, b'G')?;
@@ -493,6 +507,172 @@ mod tests {
         wrong_account_kind.set(Symbol::new(&env, "account"), server.to_string());
         assert_eq!(
             client.try_web_auth_verify(&wrong_account_kind),
+            Err(Ok(WebAuthError::MalformedArgument))
+        );
+    }
+
+    #[test]
+    fn domain_validation_accepts_ascii_and_punycode() {
+        let (env, contract_id, account, server) = setup(FixtureMode::Accept);
+        let client = WebAuthFixtureClient::new(&env, &contract_id);
+
+        let test_cases = [
+            (
+                "ANCHOR.EXAMPLE",
+                "AUTH.ANCHOR.EXAMPLE",
+                "WALLET.EXAMPLE",
+                "nonce-0",
+            ),
+            (
+                "xn--anchor-9ua.example",
+                "xn--auth-7ua.anchor.example",
+                "xn--wallet-8ua.example",
+                "nonce-1",
+            ),
+            (
+                "example.com",
+                "auth.example.com",
+                "wallet.example",
+                "nonce-2",
+            ),
+            (
+                "sub.domain.example",
+                "auth.sub.domain.example",
+                "wallet.sub.domain.example",
+                "nonce-3",
+            ),
+        ];
+        for (home_domain, web_auth_domain, client_domain, nonce) in test_cases {
+            let mut values = args(&env, &account, &server, None, nonce);
+            values.set(
+                Symbol::new(&env, "home_domain"),
+                String::from_str(&env, home_domain),
+            );
+            values.set(
+                Symbol::new(&env, "web_auth_domain"),
+                String::from_str(&env, web_auth_domain),
+            );
+            values.set(
+                Symbol::new(&env, "client_domain"),
+                String::from_str(&env, client_domain),
+            );
+            values.set(
+                Symbol::new(&env, "client_domain_account"),
+                server.to_string(),
+            );
+            client.web_auth_verify(&values);
+        }
+    }
+
+    #[test]
+    fn domain_validation_rejects_unicode() {
+        let (env, contract_id, account, server) = setup(FixtureMode::Accept);
+        let client = WebAuthFixtureClient::new(&env, &contract_id);
+
+        for (home_domain, web_auth_domain, client_domain) in [
+            (
+                "anc\u{00e9}hor.example",
+                "auth.anchor.example",
+                "wallet.example",
+            ),
+            ("anchor.example", "\u{00e9}xample.com", "wallet.example"),
+            (
+                "anchor.example",
+                "auth.anchor.example",
+                "wall\u{00e9}t.example",
+            ),
+        ] {
+            let mut values = args(&env, &account, &server, None, "nonce");
+            values.set(
+                Symbol::new(&env, "home_domain"),
+                String::from_str(&env, home_domain),
+            );
+            values.set(
+                Symbol::new(&env, "web_auth_domain"),
+                String::from_str(&env, web_auth_domain),
+            );
+            values.set(
+                Symbol::new(&env, "client_domain"),
+                String::from_str(&env, client_domain),
+            );
+            values.set(
+                Symbol::new(&env, "client_domain_account"),
+                server.to_string(),
+            );
+            assert_eq!(
+                client.try_web_auth_verify(&values),
+                Err(Ok(WebAuthError::MalformedArgument))
+            );
+        }
+    }
+
+    #[test]
+    fn domain_validation_rejects_trailing_dot() {
+        let (env, contract_id, account, server) = setup(FixtureMode::Accept);
+        let client = WebAuthFixtureClient::new(&env, &contract_id);
+
+        for (home_domain, web_auth_domain, client_domain) in [
+            ("anchor.example.", "auth.anchor.example", "wallet.example"),
+            ("anchor.example", "auth.anchor.example.", "wallet.example"),
+            ("anchor.example", "auth.anchor.example", "wallet.example."),
+        ] {
+            let mut values = args(&env, &account, &server, None, "nonce");
+            values.set(
+                Symbol::new(&env, "home_domain"),
+                String::from_str(&env, home_domain),
+            );
+            values.set(
+                Symbol::new(&env, "web_auth_domain"),
+                String::from_str(&env, web_auth_domain),
+            );
+            values.set(
+                Symbol::new(&env, "client_domain"),
+                String::from_str(&env, client_domain),
+            );
+            values.set(
+                Symbol::new(&env, "client_domain_account"),
+                server.to_string(),
+            );
+            assert_eq!(
+                client.try_web_auth_verify(&values),
+                Err(Ok(WebAuthError::MalformedArgument))
+            );
+        }
+    }
+
+    #[test]
+    fn domain_validation_enforces_length_boundary() {
+        let (env, contract_id, account, server) = setup(FixtureMode::Accept);
+        let client = WebAuthFixtureClient::new(&env, &contract_id);
+
+        let max_domain = "a".repeat(253);
+        let over_domain = "a".repeat(254);
+
+        let mut values = args(&env, &account, &server, None, "nonce");
+        values.set(
+            Symbol::new(&env, "home_domain"),
+            String::from_str(&env, &max_domain),
+        );
+        values.set(
+            Symbol::new(&env, "web_auth_domain"),
+            String::from_str(&env, "auth.example"),
+        );
+        values.set(
+            Symbol::new(&env, "client_domain"),
+            String::from_str(&env, "wallet.example"),
+        );
+        values.set(
+            Symbol::new(&env, "client_domain_account"),
+            server.to_string(),
+        );
+        client.web_auth_verify(&values);
+
+        values.set(
+            Symbol::new(&env, "home_domain"),
+            String::from_str(&env, &over_domain),
+        );
+        assert_eq!(
+            client.try_web_auth_verify(&values),
             Err(Ok(WebAuthError::MalformedArgument))
         );
     }

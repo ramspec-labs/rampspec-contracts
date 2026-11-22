@@ -524,7 +524,7 @@ mod tests {
     extern crate std;
 
     use super::{
-        AccountSignature, Ed25519Signature, Ed25519Signer, MAX_SIGNERS, PasskeySignature,
+        AccountSignature, DataKey, Ed25519Signature, Ed25519Signer, MAX_SIGNERS, PasskeySignature,
         PasskeySigner, PolicyAccountFixture, PolicyAccountFixtureClient, PolicyControls,
         PolicyError,
     };
@@ -535,7 +535,7 @@ mod tests {
     use proptest::prelude::*;
     use soroban_sdk::{
         Address, Bytes, BytesN, Env, IntoVal, Symbol, Vec,
-        auth::{Context, ContractContext},
+        auth::{Context, ContractContext, ContractExecutable, CreateContractHostFnContext},
         testutils::{Address as _, Events as _, Ledger as _},
         vec,
     };
@@ -957,6 +957,165 @@ mod tests {
     }
 
     #[test]
+    fn required_context_rejects_empty_contexts() {
+        let env = Env::default();
+        let first = key(1);
+        let signers = vec![&env, signer(&env, &first, 1)];
+        env.mock_all_auths();
+        let contract_id = env.register(PolicyAccountFixture, ());
+        let target = Address::generate(&env);
+        let admin = Address::generate(&env);
+        let client = PolicyAccountFixtureClient::new(&env, &contract_id);
+        client.initialize(&admin, &signers, &1);
+        let mut policy = controls();
+        policy.required_contract = Some(target.clone());
+        policy.required_function = Some(Symbol::new(&env, "web_auth_verify"));
+        client.set_controls(&policy);
+        let payload = [17; 32];
+        let signatures = vec![&env, signature(&env, &first, &payload)];
+
+        assert_eq!(
+            check_with_contexts(&env, &contract_id, &payload, &signatures, &Vec::new(&env)),
+            Err(Ok(PolicyError::InvalidContext))
+        );
+    }
+
+    #[test]
+    fn required_context_rejects_wrong_contract() {
+        let env = Env::default();
+        let first = key(1);
+        let signers = vec![&env, signer(&env, &first, 1)];
+        env.mock_all_auths();
+        let contract_id = env.register(PolicyAccountFixture, ());
+        let target = Address::generate(&env);
+        let wrong_contract = Address::generate(&env);
+        let admin = Address::generate(&env);
+        let client = PolicyAccountFixtureClient::new(&env, &contract_id);
+        client.initialize(&admin, &signers, &1);
+        let mut policy = controls();
+        policy.required_contract = Some(target.clone());
+        policy.required_function = Some(Symbol::new(&env, "web_auth_verify"));
+        client.set_controls(&policy);
+        let payload = [18; 32];
+        let signatures = vec![&env, signature(&env, &first, &payload)];
+
+        assert_eq!(
+            check_with_contexts(
+                &env,
+                &contract_id,
+                &payload,
+                &signatures,
+                &contract_contexts(&env, &wrong_contract, "web_auth_verify")
+            ),
+            Err(Ok(PolicyError::InvalidContext))
+        );
+    }
+
+    #[test]
+    fn required_context_rejects_wrong_function() {
+        let env = Env::default();
+        let first = key(1);
+        let signers = vec![&env, signer(&env, &first, 1)];
+        env.mock_all_auths();
+        let contract_id = env.register(PolicyAccountFixture, ());
+        let target = Address::generate(&env);
+        let admin = Address::generate(&env);
+        let client = PolicyAccountFixtureClient::new(&env, &contract_id);
+        client.initialize(&admin, &signers, &1);
+        let mut policy = controls();
+        policy.required_contract = Some(target.clone());
+        policy.required_function = Some(Symbol::new(&env, "web_auth_verify"));
+        client.set_controls(&policy);
+        let payload = [19; 32];
+        let signatures = vec![&env, signature(&env, &first, &payload)];
+
+        assert_eq!(
+            check_with_contexts(
+                &env,
+                &contract_id,
+                &payload,
+                &signatures,
+                &contract_contexts(&env, &target, "wrong_function")
+            ),
+            Err(Ok(PolicyError::InvalidContext))
+        );
+    }
+
+    #[test]
+    fn required_context_rejects_multiple_contexts() {
+        let env = Env::default();
+        let first = key(1);
+        let signers = vec![&env, signer(&env, &first, 1)];
+        env.mock_all_auths();
+        let contract_id = env.register(PolicyAccountFixture, ());
+        let target = Address::generate(&env);
+        let admin = Address::generate(&env);
+        let client = PolicyAccountFixtureClient::new(&env, &contract_id);
+        client.initialize(&admin, &signers, &1);
+        let mut policy = controls();
+        policy.required_contract = Some(target.clone());
+        policy.required_function = Some(Symbol::new(&env, "web_auth_verify"));
+        client.set_controls(&policy);
+        let payload = [20; 32];
+        let signatures = vec![&env, signature(&env, &first, &payload)];
+        let multiple_contexts = vec![
+            &env,
+            Context::Contract(ContractContext {
+                contract: target.clone(),
+                fn_name: Symbol::new(&env, "web_auth_verify"),
+                args: Vec::new(&env),
+            }),
+            Context::Contract(ContractContext {
+                contract: target.clone(),
+                fn_name: Symbol::new(&env, "web_auth_verify"),
+                args: Vec::new(&env),
+            }),
+        ];
+
+        assert_eq!(
+            check_with_contexts(
+                &env,
+                &contract_id,
+                &payload,
+                &signatures,
+                &multiple_contexts
+            ),
+            Err(Ok(PolicyError::InvalidContext))
+        );
+    }
+
+    #[test]
+    fn required_context_rejects_host_function_context() {
+        let env = Env::default();
+        let first = key(1);
+        let signers = vec![&env, signer(&env, &first, 1)];
+        env.mock_all_auths();
+        let contract_id = env.register(PolicyAccountFixture, ());
+        let target = Address::generate(&env);
+        let admin = Address::generate(&env);
+        let client = PolicyAccountFixtureClient::new(&env, &contract_id);
+        client.initialize(&admin, &signers, &1);
+        let mut policy = controls();
+        policy.required_contract = Some(target.clone());
+        policy.required_function = Some(Symbol::new(&env, "web_auth_verify"));
+        client.set_controls(&policy);
+        let payload = [21; 32];
+        let signatures = vec![&env, signature(&env, &first, &payload)];
+        let host_context = vec![
+            &env,
+            Context::CreateContractHostFn(CreateContractHostFnContext {
+                executable: ContractExecutable::Wasm(BytesN::from_array(&env, &[0; 32])),
+                salt: BytesN::from_array(&env, &[0; 32]),
+            }),
+        ];
+
+        assert_eq!(
+            check_with_contexts(&env, &contract_id, &payload, &signatures, &host_context),
+            Err(Ok(PolicyError::InvalidContext))
+        );
+    }
+
+    #[test]
     fn passkey_compatible_mode_verifies_p256_assertions() {
         let env = Env::default();
         let bootstrap = key(1);
@@ -1335,7 +1494,7 @@ mod tests {
     }
 
     fn valid_weight_policy(weights: &[u32], threshold: u32) -> bool {
-        if threshold == 0 || weights.iter().any(|weight| *weight == 0) {
+        if threshold == 0 || weights.contains(&0) {
             return false;
         }
         weights
@@ -1395,5 +1554,110 @@ mod tests {
                 prop_assert_eq!(passkey_client.config(), before);
             }
         }
+    }
+
+    #[test]
+    fn replay_marker_prevents_replay() {
+        let env = Env::default();
+        env.mock_all_auths();
+        let contract_id = env.register(PolicyAccountFixture, ());
+        let admin = Address::generate(&env);
+        let first = key(1);
+        let signers = vec![&env, signer(&env, &first, 1)];
+        let client = PolicyAccountFixtureClient::new(&env, &contract_id);
+        client.initialize(&admin, &signers, &1);
+        let payload = [1; 32];
+        let signatures = vec![&env, signature(&env, &first, &payload)];
+
+        check(&env, &contract_id, &payload, &signatures).unwrap();
+
+        let replay_result = check(&env, &contract_id, &payload, &signatures);
+        assert_eq!(replay_result, Err(Ok(PolicyError::Replay)));
+    }
+
+    #[test]
+    fn failed_authorization_does_not_create_replay_marker() {
+        let env = Env::default();
+        env.mock_all_auths();
+        let contract_id = env.register(PolicyAccountFixture, ());
+        let admin = Address::generate(&env);
+        let first = key(1);
+        let signers = vec![&env, signer(&env, &first, 1)];
+        let client = PolicyAccountFixtureClient::new(&env, &contract_id);
+        client.initialize(&admin, &signers, &1);
+        let payload = [2; 32];
+
+        let empty_signatures = vec![&env];
+        assert_eq!(
+            check(&env, &contract_id, &payload, &empty_signatures),
+            Err(Ok(PolicyError::MissingSignature))
+        );
+
+        let used_key = DataKey::UsedPayload(BytesN::from_array(&env, &payload));
+        let has_marker = env.as_contract(&contract_id, || env.storage().temporary().has(&used_key));
+        assert!(!has_marker);
+
+        let valid_signatures = vec![&env, signature(&env, &first, &payload)];
+        check(&env, &contract_id, &payload, &valid_signatures).unwrap();
+
+        let has_marker_after =
+            env.as_contract(&contract_id, || env.storage().temporary().has(&used_key));
+        assert!(has_marker_after);
+    }
+
+    #[test]
+    fn maximum_valid_authorization_stays_within_reviewed_budget() {
+        let env = Env::default();
+        env.mock_all_auths();
+        let contract_id = env.register(PolicyAccountFixture, ());
+        let admin = Address::generate(&env);
+        let first = key(1);
+        let second = key(2);
+        let third = key(3);
+        let signers = vec![
+            &env,
+            signer(&env, &first, 1),
+            signer(&env, &second, 1),
+            signer(&env, &third, 1),
+        ];
+        let client = PolicyAccountFixtureClient::new(&env, &contract_id);
+        client.initialize(&admin, &signers, &2);
+        let payload = [4; 32];
+        let signatures = vec![
+            &env,
+            signature(&env, &first, &payload),
+            signature(&env, &second, &payload),
+        ];
+
+        env.cost_estimate().budget().reset_tracker();
+        check(&env, &contract_id, &payload, &signatures).unwrap();
+
+        let budget = env.cost_estimate().budget();
+        assert!(budget.cpu_instruction_cost() <= 8_000_000);
+        assert!(budget.memory_bytes_cost() <= 6_000_000);
+    }
+
+    #[test]
+    fn passkey_authorization_stays_within_reviewed_budget() {
+        let env = Env::default();
+        env.mock_all_auths();
+        let contract_id = env.register(PolicyAccountFixture, ());
+        let admin = Address::generate(&env);
+        let bootstrap = key(1);
+        let bootstrap_signers = vec![&env, signer(&env, &bootstrap, 1)];
+        let passkey = passkey_key(3);
+        let passkeys = vec![&env, passkey_signer(&env, &passkey, 1)];
+        let client = PolicyAccountFixtureClient::new(&env, &contract_id);
+        client.initialize(&admin, &bootstrap_signers, &1);
+        client.set_passkeys(&passkeys, &1);
+        let payload = [5; 32];
+        let signatures = vec![&env, passkey_signature(&env, &passkey, &payload)];
+
+        env.cost_estimate().budget().reset_tracker();
+        check(&env, &contract_id, &payload, &signatures).unwrap();
+
+        let budget = env.cost_estimate().budget();
+        assert!(budget.cpu_instruction_cost() <= 30_000_000);
+        assert!(budget.memory_bytes_cost() <= 24_000_000);
     }
 }

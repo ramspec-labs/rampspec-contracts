@@ -54,7 +54,13 @@ try {
             throw "generated binding file missing: $relative"
         }
         if ((Get-FileHash $file.FullName -Algorithm SHA256).Hash -ne (Get-FileHash $other -Algorithm SHA256).Hash) {
-            throw "generated binding drift: $relative"
+            $contractName = $relative.Split('\')[0]
+            $firstDiff = Get-FirstTypeScriptDiff $file.FullName $other
+            if ($firstDiff) {
+                throw "generated binding drift: contract=$contractName, file=$relative, first_diff=$firstDiff"
+            } else {
+                throw "generated binding drift: $relative"
+            }
         }
     }
     Write-Output "generated contract specs are current"
@@ -63,4 +69,22 @@ finally {
     if (Test-Path -LiteralPath $temporaryRoot) {
         Remove-Item -LiteralPath $temporaryRoot -Recurse -Force
     }
+}
+
+function Get-FirstTypeScriptDiff($expectedPath, $actualPath) {
+    $expectedContent = Get-Content -LiteralPath $expectedPath -Raw
+    $actualContent = Get-Content -LiteralPath $actualPath -Raw
+    $expectedLines = $expectedContent -split "`r?`n"
+    $actualLines = $actualContent -split "`r?`n"
+    $maxLines = [Math]::Max($expectedLines.Count, $actualLines.Count)
+    for ($i = 0; $i -lt $maxLines; $i++) {
+        $e = if ($i -lt $expectedLines.Count) { $expectedLines[$i] } else { "" }
+        $a = if ($i -lt $actualLines.Count) { $actualLines[$i] } else { "" }
+        if ($e -ne $a) {
+            $snippet = $a.Trim()
+            if ($snippet.Length -gt 120) { $snippet = $snippet.Substring(0, 120) + "..." }
+            return "line $($i + 1): $snippet"
+        }
+    }
+    return $null
 }
