@@ -2,6 +2,7 @@
 contracts/*/test_snapshots/
 /fuzz/artifacts/
 /fuzz/corpus/
+!/fuzz/regression-fixtures/
 /fuzz/target/
 /.stellar/
 *.wasm

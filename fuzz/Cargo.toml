@@ -27,4 +27,18 @@ test = false
 doc = false
 bench = false
 
+[[bin]]
+name = "evidence_id_encoding"
+path = "fuzz_targets/evidence_id_encoding.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "upgrade_inputs"
+path = "fuzz_targets/upgrade_inputs.rs"
+test = false
+doc = false
+bench = false
+
 [workspace]
