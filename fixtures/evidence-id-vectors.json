@@ -1,0 +1,15 @@
+{
+  "schemaVersion": 1,
+  "description": "Evidence ID derivation compatibility vectors for rampspec-evidence-v1. NOTE: The XDR encoding used here matches AccountId format (discriminant + 32-byte key). Verify against actual contract output.",
+  "domainSeparator": "rampspec-evidence-v1",
+  "vectors": [
+    {
+      "description": "Canonical test vector - all-zero publisher (AccountId XDR format)",
+      "publisher": "GAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAWHF",
+      "reportHash": "0707070707070707070707070707070707070707070707070707070707070707",
+      "network": "Testnet",
+      "expectedId": "7cda4b96bcd3d0ec6b744ebaf72c720c1b5a0f1e585ab0ef8c71530a6fb1a05f",
+      "note": "This expectedId is computed using AccountId XDR encoding. Needs verification against soroban-sdk Address.to_xdr() output."
+    }
+  ]
+}

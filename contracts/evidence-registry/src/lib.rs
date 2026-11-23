@@ -114,6 +114,21 @@ impl EvidenceRegistry {
         Ok(version)
     }
 
+    #[must_use]
+    pub fn get_pending_admin(env: Env) -> Option<Address> {
+        let pending = storage::pending_admin(&env);
+        if pending.is_some() {
+            storage::extend_instance_ttl(&env);
+        }
+        pending
+    }
+
+    pub fn is_paused(env: Env) -> Result<bool, ContractError> {
+        let paused = storage::is_paused(&env)?;
+        storage::extend_instance_ttl(&env);
+        Ok(paused)
+    }
+
     pub fn initialize(env: Env, admin: Address, schema_version: u32) -> Result<(), ContractError> {
         if storage::is_initialized(&env) {
             return Err(ContractError::AlreadyInitialized);
@@ -1670,5 +1685,175 @@ mod tests {
             client.try_maintain_evidence(&id),
             Err(Ok(ContractError::EvidenceNotFound))
         );
+    }
+
+    #[test]
+    fn get_pending_admin_returns_none_when_no_proposal_exists() {
+        let (env, contract_id, admin) = setup();
+        let client = EvidenceRegistryClient::new(&env, &contract_id);
+        client.initialize(&admin, &SCHEMA_VERSION);
+        assert_eq!(client.get_pending_admin(), None);
+    }
+
+    #[test]
+    fn get_pending_admin_returns_proposed_administrator() {
+        let (env, contract_id, admin) = setup();
+        let client = EvidenceRegistryClient::new(&env, &contract_id);
+        client.initialize(&admin, &SCHEMA_VERSION);
+        let pending = Address::generate(&env);
+        client.propose_admin(&pending);
+        assert_eq!(client.get_pending_admin(), Some(pending));
+    }
+
+    #[test]
+    fn get_pending_admin_returns_none_after_cancellation() {
+        let (env, contract_id, admin) = setup();
+        let client = EvidenceRegistryClient::new(&env, &contract_id);
+        client.initialize(&admin, &SCHEMA_VERSION);
+        let pending = Address::generate(&env);
+        client.propose_admin(&pending);
+        client.cancel_admin_transfer();
+        assert_eq!(client.get_pending_admin(), None);
+    }
+
+    #[test]
+    fn get_pending_admin_returns_none_after_acceptance() {
+        let (env, contract_id, admin) = setup();
+        let client = EvidenceRegistryClient::new(&env, &contract_id);
+        client.initialize(&admin, &SCHEMA_VERSION);
+        let pending = Address::generate(&env);
+        client.propose_admin(&pending);
+        client.accept_admin();
+        assert_eq!(client.get_pending_admin(), None);
+    }
+
+    #[test]
+    fn get_pending_admin_requires_no_authorization() {
+        let (env, contract_id, admin) = setup();
+        let client = EvidenceRegistryClient::new(&env, &contract_id);
+        client.initialize(&admin, &SCHEMA_VERSION);
+        let pending = Address::generate(&env);
+        client.propose_admin(&pending);
+        env.set_auths(&[]);
+        assert_eq!(client.get_pending_admin(), Some(pending));
+    }
+
+    #[test]
+    fn get_pending_admin_does_not_modify_state_or_publish_events() {
+        let (env, contract_id, admin) = setup();
+        let client = EvidenceRegistryClient::new(&env, &contract_id);
+        client.initialize(&admin, &SCHEMA_VERSION);
+        let pending = Address::generate(&env);
+        client.propose_admin(&pending);
+        let before = env.as_contract(&contract_id, || storage::pending_admin(&env));
+        client.get_pending_admin();
+        let after = env.as_contract(&contract_id, || storage::pending_admin(&env));
+        assert_eq!(before, after);
+        assert_eq!(env.events().all().events().len(), 0);
+    }
+
+    #[test]
+    fn get_pending_admin_does_not_cause_unintended_ttl_changes() {
+        let (env, contract_id, admin) = setup();
+        let client = EvidenceRegistryClient::new(&env, &contract_id);
+        client.initialize(&admin, &SCHEMA_VERSION);
+        env.ledger().set_sequence_number(2_000_000);
+        let ttl_before = env.as_contract(&contract_id, || env.storage().instance().get_ttl());
+        assert!(ttl_before < storage::INSTANCE_TTL_THRESHOLD);
+        client.get_pending_admin();
+        let ttl_after = env.as_contract(&contract_id, || env.storage().instance().get_ttl());
+        assert_eq!(ttl_after, ttl_before);
+
+        let pending = Address::generate(&env);
+        client.propose_admin(&pending);
+        env.ledger().set_sequence_number(3_000_000);
+        let ttl_with_pending = env.as_contract(&contract_id, || env.storage().instance().get_ttl());
+        assert!(ttl_with_pending < storage::INSTANCE_TTL_THRESHOLD);
+        client.get_pending_admin();
+        let ttl_refreshed = env.as_contract(&contract_id, || env.storage().instance().get_ttl());
+        assert!(ttl_refreshed >= storage::INSTANCE_TTL_TARGET - 1);
+    }
+
+    #[test]
+    fn is_paused_requires_initialization() {
+        let (env, contract_id, _admin) = setup();
+        let client = EvidenceRegistryClient::new(&env, &contract_id);
+        assert_eq!(
+            client.try_is_paused(),
+            Err(Ok(ContractError::NotInitialized))
+        );
+    }
+
+    #[test]
+    fn is_paused_returns_false_after_initialization() {
+        let (env, contract_id, admin) = setup();
+        let client = EvidenceRegistryClient::new(&env, &contract_id);
+        client.initialize(&admin, &SCHEMA_VERSION);
+        assert_eq!(client.is_paused(), Ok(false));
+    }
+
+    #[test]
+    fn is_paused_returns_true_after_pausing() {
+        let (env, contract_id, admin) = setup();
+        let client = EvidenceRegistryClient::new(&env, &contract_id);
+        client.initialize(&admin, &SCHEMA_VERSION);
+        client.set_paused(&true);
+        assert_eq!(client.is_paused(), Ok(true));
+    }
+
+    #[test]
+    fn is_paused_returns_false_after_unpausing() {
+        let (env, contract_id, admin) = setup();
+        let client = EvidenceRegistryClient::new(&env, &contract_id);
+        client.initialize(&admin, &SCHEMA_VERSION);
+        client.set_paused(&true);
+        client.set_paused(&false);
+        assert_eq!(client.is_paused(), Ok(false));
+    }
+
+    #[test]
+    fn is_paused_requires_no_authorization() {
+        let (env, contract_id, admin) = setup();
+        let client = EvidenceRegistryClient::new(&env, &contract_id);
+        client.initialize(&admin, &SCHEMA_VERSION);
+        client.set_paused(&true);
+        env.set_auths(&[]);
+        assert_eq!(client.is_paused(), Ok(true));
+    }
+
+    #[test]
+    fn is_paused_remains_available_while_paused() {
+        let (env, contract_id, admin) = setup();
+        let client = EvidenceRegistryClient::new(&env, &contract_id);
+        client.initialize(&admin, &SCHEMA_VERSION);
+        client.set_paused(&true);
+        env.set_auths(&[]);
+        assert_eq!(client.is_paused(), Ok(true));
+    }
+
+    #[test]
+    fn is_paused_does_not_modify_state_or_publish_events() {
+        let (env, contract_id, admin) = setup();
+        let client = EvidenceRegistryClient::new(&env, &contract_id);
+        client.initialize(&admin, &SCHEMA_VERSION);
+        client.set_paused(&true);
+        let before = env.as_contract(&contract_id, || storage::is_paused(&env));
+        client.is_paused();
+        let after = env.as_contract(&contract_id, || storage::is_paused(&env));
+        assert_eq!(before, after);
+        assert_eq!(env.events().all().events().len(), 0);
+    }
+
+    #[test]
+    fn is_paused_does_not_cause_unintended_ttl_changes() {
+        let (env, contract_id, admin) = setup();
+        let client = EvidenceRegistryClient::new(&env, &contract_id);
+        client.initialize(&admin, &SCHEMA_VERSION);
+        env.ledger().set_sequence_number(2_000_000);
+        let ttl_before = env.as_contract(&contract_id, || env.storage().instance().get_ttl());
+        assert!(ttl_before < storage::INSTANCE_TTL_THRESHOLD);
+        client.is_paused();
+        let ttl_after = env.as_contract(&contract_id, || env.storage().instance().get_ttl());
+        assert!(ttl_after >= storage::INSTANCE_TTL_TARGET - 1);
     }
 }
