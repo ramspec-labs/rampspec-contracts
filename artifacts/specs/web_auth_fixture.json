@@ -123,6 +123,16 @@
   },
   {
     "function_v0": {
+      "doc": "Monotonic generation of the applied fixture configuration. Identical and rejected configure calls do not increment it.",
+      "inputs": [],
+      "name": "config_generation",
+      "outputs": [
+        "u32"
+      ]
+    }
+  },
+  {
+    "function_v0": {
       "doc": "",
       "inputs": [
         {

@@ -234,3 +234,64 @@ export class Client extends ContractClient {
         is_nonce_consumed: this.txFromJSON<boolean>
   }
 }
+
+const WEB_AUTH_ERROR_NAMES: Record<number, string> = {
+  1: "MissingArgument",
+  2: "MalformedArgument",
+  3: "NotInitialized",
+  4: "AlreadyInitialized",
+  5: "InvalidTimeWindow",
+  6: "NotYetValid",
+  7: "Expired",
+  8: "Replay",
+  9: "Rejected",
+  10: "UnknownNonce",
+};
+
+export const FIXTURE_CONFIG_GENERATION_METHOD = "config_generation";
+
+/**
+ * Decode a web-auth fixture failure. Malformed and unknown payloads stay failures.
+ * This never reports success.
+ */
+export function decodeWebAuthFailure(payload: unknown): { ok: false; code: number | null; name: string } {
+  const code = readErrorCode(payload);
+  if (code == null || WEB_AUTH_ERROR_NAMES[code] == null) {
+    return { ok: false, code, name: "Unknown" };
+  }
+  return { ok: false, code, name: WEB_AUTH_ERROR_NAMES[code] };
+}
+
+/**
+ * A verification result is successful only for `{ ok: true }` with no error fields.
+ * Unknown codes, malformed bodies, and mixed success/error objects are failures.
+ */
+export function interpretWebAuthResult(payload: unknown): { ok: true } | { ok: false; code: number | null; name: string } {
+  if (!isCleanSuccess(payload)) {
+    return decodeWebAuthFailure(payload);
+  }
+  return { ok: true };
+}
+
+function isCleanSuccess(payload: unknown): boolean {
+  if (!payload || typeof payload !== "object" || Array.isArray(payload)) return false;
+  const record = payload as Record<string, unknown>;
+  if (record.ok !== true) return false;
+  if ("error" in record || "code" in record || "name" in record) return false;
+  return true;
+}
+
+function readErrorCode(payload: unknown): number | null {
+  if (typeof payload === "number" && Number.isInteger(payload)) return payload;
+  if (!payload || typeof payload !== "object") return null;
+  const record = payload as Record<string, unknown>;
+  for (const key of ["code", "error"]) {
+    const value = record[key];
+    if (typeof value === "number" && Number.isInteger(value)) return value;
+    if (value && typeof value === "object" && "code" in value) {
+      const nested = (value as Record<string, unknown>).code;
+      if (typeof nested === "number" && Number.isInteger(nested)) return nested;
+    }
+  }
+  return null;
+}

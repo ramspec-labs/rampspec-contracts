@@ -17,6 +17,8 @@ The assets are immutable evidence commitments, active/revoked/superseded lifecyc
 
 Explicit Soroban authorization protects every write; reads remain public. Versioned storage keys and fixed errors preserve compatibility. Validation rejects zero hashes, unsupported bitmaps, invalid scores/counts, duplicates, terminal-state reuse, ownership violations, cycles, and overlong replacement chains. Events have snapshot tests. Pause is fail-closed for publication, replacement, and upgrade while reads and revocation remain available. Administrator transfer is two-step. Upgrade requires administrator authorization, a nonzero unseen hash, and an unpaused registry. TTL maintenance is explicit and budgeted.
 
+Web-auth fixture events publish the account and a nonce hash, or the admin and a nonce hash, and never the raw nonce, domain secrets, or rejected argument text. A rejected verification or an unknown-nonce reset returns before any write or event. Configuration changes bump a separate generation counter; an identical configure call and a rejected time window leave that counter and the event stream unchanged.
+
 Reproducible builds, canonical specs, generated clients, locked dependencies, fixture manifests, test-only ABI labels, deployment seals, released-WASM allowlisting, live code fetches, schema reads, event transaction capture, and secret scanning protect the supply and deployment paths. Passkey authorization binds the challenge to the exact Soroban payload and rejects malformed or high-S P-256 signatures before verification or replay writes. Property and fuzz tests cover state-machine and hostile-input behavior.
 
 ## Residual Risks
