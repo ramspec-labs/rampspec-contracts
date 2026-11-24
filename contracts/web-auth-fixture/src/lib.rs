@@ -8,6 +8,11 @@ use soroban_sdk::{
 
 pub const SEP_45_VERSION: &str = "0.1.1";
 
+// The fixture uses five-second ledgers. Replay markers remain live for one day
+// and are automatically renewed to that target only on successful consumption.
+const NONCE_TTL_THRESHOLD: u32 = 720;
+const NONCE_TTL_TARGET: u32 = 17_280;
+
 #[contracterror]
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 #[repr(u32)]
@@ -279,6 +284,9 @@ impl WebAuthFixture {
         }
 
         env.storage().temporary().set(&nonce_key, &true);
+        env.storage()
+            .temporary()
+            .extend_ttl(&nonce_key, NONCE_TTL_THRESHOLD, NONCE_TTL_TARGET);
         AuthenticationVerified {
             account: parsed.account,
             nonce_hash,
@@ -292,11 +300,17 @@ impl WebAuthFixture {
 mod tests {
     extern crate std;
 
-    use super::{FixtureMode, SEP_45_VERSION, WebAuthError, WebAuthFixture, WebAuthFixtureClient};
+    use super::{
+        DataKey, FixtureMode, NONCE_TTL_TARGET, SEP_45_VERSION, WebAuthError, WebAuthFixture,
+        WebAuthFixtureClient, nonce_hash,
+    };
+    use proptest::prelude::*;
     use soroban_sdk::{
         Address, BytesN, Env, IntoVal, Map, String, Symbol,
         address_payload::AddressPayload,
-        testutils::{Address as _, AuthorizedFunction, Events as _, Ledger as _},
+        testutils::{
+            Address as _, AuthorizedFunction, Events as _, Ledger as _, storage::Temporary,
+        },
     };
 
     const CURRENT_LEDGER: u32 = 100;
@@ -356,6 +370,48 @@ mod tests {
             &(CURRENT_LEDGER + 1),
         );
         (env, contract_id, account, server)
+    }
+
+    #[test]
+    fn nonce_hash_separates_boundary_and_structured_corpus() {
+        let env = Env::default();
+        let nonce_corpus = [
+            String::from_str(&env, ""),
+            String::from_str(&env, "a"),
+            String::from_str(&env, "ab"),
+            String::from_str(&env, "prefix-a"),
+            String::from_str(&env, "prefix-b"),
+            String::from_str(&env, "nonce-ñ"),
+            String::from_str(&env, "nonce-東京"),
+            String::from_str(&env, &"x".repeat(128)),
+        ];
+
+        let mut derived = std::vec::Vec::new();
+        for nonce in &nonce_corpus {
+            derived.push(nonce_hash(&env, nonce));
+        }
+
+        for left in 0..derived.len() {
+            for right in (left + 1)..derived.len() {
+                assert_ne!(derived[left], derived[right]);
+            }
+        }
+    }
+
+    proptest! {
+        #![proptest_config(ProptestConfig { cases: 32, ..ProptestConfig::default() })]
+
+        #[test]
+        fn distinct_nonce_hashes_remain_separated(
+            left in "[^\\n]{0,128}",
+            right in "[^\\n]{0,128}",
+        ) {
+            prop_assume!(left != right);
+            let env = Env::default();
+            let left_nonce = String::from_str(&env, &left);
+            let right_nonce = String::from_str(&env, &right);
+            prop_assert_ne!(nonce_hash(&env, &left_nonce), nonce_hash(&env, &right_nonce));
+        }
     }
 
     #[test]
@@ -438,6 +494,56 @@ mod tests {
         assert!(!client.is_nonce_consumed(&nonce));
         client.web_auth_verify(&values);
         assert_eq!(env.events().all().events().len(), 1);
+    }
+
+    #[test]
+    fn nonce_ttl_is_set_once_and_reset_clears_marker() {
+        let (env, contract_id, account, server) = setup(FixtureMode::Accept);
+        let client = WebAuthFixtureClient::new(&env, &contract_id);
+        let nonce = String::from_str(&env, "ttl-boundary");
+        let values = args(&env, &account, &server, None, "ttl-boundary");
+
+        client.web_auth_verify(&values);
+        let nonce_key = DataKey::Nonce(nonce_hash(&env, &nonce));
+        let ttl = env.as_contract(&contract_id, || {
+            env.storage().temporary().get_ttl(&nonce_key)
+        });
+        assert_eq!(ttl, NONCE_TTL_TARGET);
+
+        assert_eq!(
+            client.try_web_auth_verify(&values),
+            Err(Ok(WebAuthError::Replay))
+        );
+        let ttl_after_replay = env.as_contract(&contract_id, || {
+            env.storage().temporary().get_ttl(&nonce_key)
+        });
+        assert_eq!(ttl_after_replay, ttl);
+
+        client.reset_nonce(&nonce);
+        assert!(!client.is_nonce_consumed(&nonce));
+
+        env.ledger().set_sequence_number(CURRENT_LEDGER + 20_000);
+        assert!(!client.is_nonce_consumed(&nonce));
+    }
+
+    #[test]
+    fn failed_verification_does_not_create_or_extend_nonce_ttl() {
+        let (env, contract_id, account, server) = setup(FixtureMode::Reject);
+        let client = WebAuthFixtureClient::new(&env, &contract_id);
+        let nonce = String::from_str(&env, "failed");
+        let values = args(&env, &account, &server, None, "failed");
+
+        assert_eq!(
+            client.try_web_auth_verify(&values),
+            Err(Ok(WebAuthError::Rejected))
+        );
+        assert!(!client.is_nonce_consumed(&nonce));
+
+        assert_eq!(
+            client.try_reset_nonce(&nonce),
+            Err(Ok(WebAuthError::UnknownNonce))
+        );
+        assert!(!client.is_nonce_consumed(&nonce));
     }
 
     #[test]
