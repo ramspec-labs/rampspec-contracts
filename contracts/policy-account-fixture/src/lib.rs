@@ -18,7 +18,7 @@ use soroban_sdk::{
     xdr::ToXdr,
 };
 
-const MAX_SIGNERS: u32 = 16;
+pub const MAX_SIGNERS: u32 = 16;
 const MIN_AUTHENTICATOR_DATA_LENGTH: u32 = 37;
 const MAX_AUTHENTICATOR_DATA_LENGTH: u32 = 512;
 
@@ -514,7 +514,15 @@ impl CustomAccountInterface for PolicyAccountFixture {
                 }
             }
         }
+        let current_ledger = env.ledger().sequence();
+        let min_ledger_lifetime = 17_280_u32;
+        let target_ledger_lifetime = 103_680_u32;
         env.storage().temporary().set(&used_key, &true);
+        env.storage().temporary().extend_ttl(
+            &used_key,
+            min_ledger_lifetime,
+            target_ledger_lifetime,
+        );
         Ok(())
     }
 }

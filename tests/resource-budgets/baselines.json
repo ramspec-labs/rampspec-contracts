@@ -26,13 +26,13 @@
     "policy_account_fixture.wasm": {
       "__check_auth": { "cpuMax": 30000000, "memoryMax": 24000000, "storageWritesMax": 1, "eventsMax": 0, "ttl": "temporary" },
       "config": { "cpuMax": 5000000, "memoryMax": 5000000, "storageWritesMax": 0, "eventsMax": 0, "ttl": "none" },
-      "initialize": { "cpuMax": 15000000, "memoryMax": 12000000, "storageWritesMax": 1, "eventsMax": 0, "ttl": "instance" },
+      "initialize": { "cpuMax": 15000000, "memoryMax": 12000000, "storageWritesMax": 2, "eventsMax": 1, "ttl": "instance" },
       "is_test_only": { "cpuMax": 2000000, "memoryMax": 2000000, "storageWritesMax": 0, "eventsMax": 0, "ttl": "none" },
       "passkey_supported": { "cpuMax": 2000000, "memoryMax": 2000000, "storageWritesMax": 0, "eventsMax": 0, "ttl": "none" },
       "schema_version": { "cpuMax": 2000000, "memoryMax": 2000000, "storageWritesMax": 0, "eventsMax": 0, "ttl": "none" },
-      "set_controls": { "cpuMax": 15000000, "memoryMax": 12000000, "storageWritesMax": 1, "eventsMax": 0, "ttl": "instance" },
-      "set_passkeys": { "cpuMax": 20000000, "memoryMax": 16000000, "storageWritesMax": 1, "eventsMax": 0, "ttl": "instance" },
-      "set_signers": { "cpuMax": 20000000, "memoryMax": 16000000, "storageWritesMax": 1, "eventsMax": 0, "ttl": "instance" }
+      "set_controls": { "cpuMax": 15000000, "memoryMax": 12000000, "storageWritesMax": 2, "eventsMax": 1, "ttl": "instance" },
+      "set_passkeys": { "cpuMax": 20000000, "memoryMax": 16000000, "storageWritesMax": 2, "eventsMax": 1, "ttl": "instance" },
+      "set_signers": { "cpuMax": 20000000, "memoryMax": 16000000, "storageWritesMax": 2, "eventsMax": 1, "ttl": "instance" }
     },
     "web_auth_fixture.wasm": {
       "config": { "cpuMax": 5000000, "memoryMax": 5000000, "storageWritesMax": 0, "eventsMax": 0, "ttl": "none" },
