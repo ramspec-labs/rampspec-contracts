@@ -9,7 +9,9 @@ node scripts/rehearse-upgrade.mjs deployments/local/runtime/manifest.json
 node scripts/rehearse-upgrade.mjs deployments/testnet/runtime/manifest.json
 ```
 
-The harness first verifies the manifest offline and against RPC. It publishes a pre-upgrade record, upgrades to the exact reviewed evidence-registry WASM already bound by the manifest, proves the old record remains readable, publishes and reads a new record, and saves event indexes from before and after the operation. Reports are written beneath ignored `artifacts/upgrade-rehearsals/`.
+The harness first verifies the manifest offline and against RPC. It creates synthetic, versioned before-and-after instance and persistent key-shape snapshots, never mutates the manifest, and rejects removed or retyped or undecodable storage shapes. A breaking layout change requires explicit reviewed migration evidence supplied through `RAMPSPEC_REHEARSAL_MIGRATION_EVIDENCE` as JSON containing `reviewId`, `migrationPlan`, `sourceRevision`, and `targetRevision`.
+
+It then publishes a pre-upgrade record, upgrades to the exact reviewed evidence-registry WASM already bound by the manifest, proves the old record remains readable, publishes and reads a new record, and saves event indexes and storage compatibility records from before and after the operation. Reports are written beneath ignored `artifacts/upgrade-rehearsals/`; synthetic fixtures use no full reports or customer data.
 
 Do not pause the registry merely because an upgrade is scheduled. Pause blocks the upgrade entry point and should be used only to stop publication while an incident is assessed; unpause through reviewed administrator authorization before attempting an upgrade. Indexers must replay from the manifest ledger and retain event identity while rebuilding projections.
 
