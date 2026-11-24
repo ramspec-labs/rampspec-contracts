@@ -1,0 +1,194 @@
+{
+  "schemaVersion": 1,
+  "description": "Policy commitment compatibility vectors for independent consumer validation",
+  "serialization": "Soroban XDR (ScVal encoding of PolicyConfig structure)",
+  "hashFunction": "SHA-256",
+  "fieldOrdering": "Struct fields are serialized in declaration order: admin, signers, passkey_signers, threshold, signature_mode, controls",
+  "signerOrdering": "Signer order within arrays is preserved as provided; changing order changes the commitment",
+  "vectors": [
+    {
+      "description": "single_ed25519_signer_minimal",
+      "config": {
+        "admin": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD2KM",
+        "signers": [
+          {
+            "public_key": "0101010101010101010101010101010101010101010101010101010101010101",
+            "weight": 1
+          }
+        ],
+        "passkey_signers": [],
+        "threshold": 1,
+        "signature_mode": "Ed25519",
+        "controls": {
+          "valid_from_ledger": 0,
+          "expires_at_ledger": 4294967295,
+          "reject_all": false,
+          "additional_signer": null,
+          "required_contract": null,
+          "required_function": null
+        }
+      },
+      "commitment": "placeholder"
+    },
+    {
+      "description": "multiple_signers_different_weights",
+      "config": {
+        "admin": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD2KM",
+        "signers": [
+          {
+            "public_key": "0101010101010101010101010101010101010101010101010101010101010101",
+            "weight": 1
+          },
+          {
+            "public_key": "0202020202020202020202020202020202020202020202020202020202020202",
+            "weight": 2
+          },
+          {
+            "public_key": "0303030303030303030303030303030303030303030303030303030303030303",
+            "weight": 3
+          }
+        ],
+        "passkey_signers": [],
+        "threshold": 4,
+        "signature_mode": "Ed25519",
+        "controls": {
+          "valid_from_ledger": 0,
+          "expires_at_ledger": 4294967295,
+          "reject_all": false,
+          "additional_signer": null,
+          "required_contract": null,
+          "required_function": null
+        }
+      },
+      "commitment": "placeholder"
+    },
+    {
+      "description": "ed25519_with_controls",
+      "config": {
+        "admin": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD2KM",
+        "signers": [
+          {
+            "public_key": "0505050505050505050505050505050505050505050505050505050505050505",
+            "weight": 1
+          }
+        ],
+        "passkey_signers": [],
+        "threshold": 1,
+        "signature_mode": "Ed25519",
+        "controls": {
+          "valid_from_ledger": 100,
+          "expires_at_ledger": 200,
+          "reject_all": false,
+          "additional_signer": "0606060606060606060606060606060606060606060606060606060606060606",
+          "required_contract": null,
+          "required_function": null
+        }
+      },
+      "commitment": "placeholder"
+    },
+    {
+      "description": "passkey_single_signer",
+      "config": {
+        "admin": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD2KM",
+        "signers": [],
+        "passkey_signers": [
+          {
+            "public_key": "0407070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707070707",
+            "weight": 1
+          }
+        ],
+        "threshold": 1,
+        "signature_mode": "PasskeyCompatible",
+        "controls": {
+          "valid_from_ledger": 0,
+          "expires_at_ledger": 4294967295,
+          "reject_all": false,
+          "additional_signer": null,
+          "required_contract": null,
+          "required_function": null
+        }
+      },
+      "commitment": "placeholder"
+    },
+    {
+      "description": "ed25519_with_required_contract",
+      "config": {
+        "admin": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD2KM",
+        "signers": [
+          {
+            "public_key": "0909090909090909090909090909090909090909090909090909090909090909",
+            "weight": 1
+          }
+        ],
+        "passkey_signers": [],
+        "threshold": 1,
+        "signature_mode": "Ed25519",
+        "controls": {
+          "valid_from_ledger": 0,
+          "expires_at_ledger": 4294967295,
+          "reject_all": false,
+          "additional_signer": null,
+          "required_contract": "CCAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAADFOE",
+          "required_function": "invoke"
+        }
+      },
+      "commitment": "placeholder"
+    },
+    {
+      "description": "ed25519_signer_order_preserved",
+      "config": {
+        "admin": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD2KM",
+        "signers": [
+          {
+            "public_key": "0303030303030303030303030303030303030303030303030303030303030303",
+            "weight": 1
+          },
+          {
+            "public_key": "0101010101010101010101010101010101010101010101010101010101010101",
+            "weight": 1
+          },
+          {
+            "public_key": "0202020202020202020202020202020202020202020202020202020202020202",
+            "weight": 1
+          }
+        ],
+        "passkey_signers": [],
+        "threshold": 2,
+        "signature_mode": "Ed25519",
+        "controls": {
+          "valid_from_ledger": 0,
+          "expires_at_ledger": 4294967295,
+          "reject_all": false,
+          "additional_signer": null,
+          "required_contract": null,
+          "required_function": null
+        }
+      },
+      "commitment": "placeholder"
+    },
+    {
+      "description": "threshold_affects_commitment",
+      "config": {
+        "admin": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD2KM",
+        "signers": [
+          {
+            "public_key": "0101010101010101010101010101010101010101010101010101010101010101",
+            "weight": 1
+          }
+        ],
+        "passkey_signers": [],
+        "threshold": 1,
+        "signature_mode": "Ed25519",
+        "controls": {
+          "valid_from_ledger": 0,
+          "expires_at_ledger": 4294967295,
+          "reject_all": false,
+          "additional_signer": null,
+          "required_contract": null,
+          "required_function": null
+        }
+      },
+      "commitment": "placeholder"
+    }
+  ]
+}
