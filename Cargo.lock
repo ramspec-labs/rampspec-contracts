@@ -2200,6 +2200,7 @@ dependencies = [
 name = "web-auth-fixture"
 version = "0.1.0"
 dependencies = [
+ "proptest",
  "rampspec-shared-types",
  "rampspec-test-support",
  "soroban-sdk",

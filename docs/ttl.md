@@ -2,10 +2,11 @@
 
 RampSpec assumes five-second ledgers for human-readable estimates. Ledger counts, not wall-clock timestamps, are authoritative.
 
-| State | Extend below | Extend to | Approximate target |
-| --- | ---: | ---: | ---: |
-| Contract instance and code | 103,680 ledgers | 2,073,600 ledgers | 120 days |
-| Attestors, evidence, and indexes | 518,400 ledgers | 3,110,400 ledgers | 180 days |
+| State                                   |    Extend below |         Extend to | Approximate target |
+| --------------------------------------- | --------------: | ----------------: | -----------------: |
+| Contract instance and code              | 103,680 ledgers | 2,073,600 ledgers |           120 days |
+| Attestors, evidence, and indexes        | 518,400 ledgers | 3,110,400 ledgers |           180 days |
+| Consumed web-auth fixture nonce markers |     720 ledgers |    17,280 ledgers |     1 hour / 1 day |
 
 Every relevant write extends its state. Successful `schema_version`, `get_attestor`, `get_evidence`, and `is_active` reads extend only the contract instance TTL; missing attestor or evidence reads do not extend TTL or create state. This keeps frequently verified registry configuration and code live while leaving persistent-entry retention under explicit operator control. Callers pay the additional instance-rent bump when the threshold is reached.
 

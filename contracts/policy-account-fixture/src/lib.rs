@@ -1335,7 +1335,7 @@ mod tests {
     }
 
     fn valid_weight_policy(weights: &[u32], threshold: u32) -> bool {
-        if threshold == 0 || weights.iter().any(|weight| *weight == 0) {
+        if threshold == 0 || weights.contains(&0) {
             return false;
         }
         weights
