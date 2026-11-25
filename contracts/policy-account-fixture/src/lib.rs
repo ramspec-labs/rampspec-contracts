@@ -18,6 +18,8 @@ use soroban_sdk::{
     xdr::ToXdr,
 };
 
+
+
 const MAX_SIGNERS: u32 = 16;
 const MIN_AUTHENTICATOR_DATA_LENGTH: u32 = 37;
 const MAX_AUTHENTICATOR_DATA_LENGTH: u32 = 512;
@@ -57,6 +59,25 @@ pub struct Ed25519Signer {
 pub struct Ed25519Signature {
     pub public_key: BytesN<32>,
     pub signature: BytesN<64>,
+}
+
+pub fn compute_context_digest(env: &Env, auth_contexts: &Vec<Context>) -> BytesN<32> {
+    let encoded = auth_contexts.to_xdr(env);
+    env.crypto().sha256(&encoded).into()
+}
+
+fn enforce_context_digest(
+    env: &Env,
+    policy: &PolicyConfigV2,
+    auth_contexts: &Vec<Context>,
+) -> Result<(), PolicyAccountError> {
+    if let Some(expected) = &policy.expected_context_digest {
+        let actual = compute_context_digest(env, auth_contexts);
+        if actual != *expected {
+            return Err(PolicyAccountError::ContextDigestMismatch);
+        }
+    }
+    Ok(())
 }
 
 #[contracttype]

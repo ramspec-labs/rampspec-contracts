@@ -497,3 +497,49 @@ mod tests {
         );
     }
 }
+
+
+/// Exact SEP-45 allowlisted keys.
+fn is_allowed_web_auth_key(env: &Env, key: &Symbol) -> bool {
+    *key == Symbol::new(env, "account")
+        || *key == Symbol::new(env, "home_domain")
+        || *key == Symbol::new(env, "web_auth_domain")
+        || *key == Symbol::new(env, "web_auth_domain_account")
+        || *key == Symbol::new(env, "nonce")
+        || *key == Symbol::new(env, "client_domain")
+        || *key == Symbol::new(env, "client_domain_account")
+}
+
+fn validate_arg_keys_strict(env: &Env, args: &Map<Symbol, String>) -> Result<(), WebAuthError> {
+    // 1. Reject any unknown/misspelled key deterministically before auth or nonce mutation
+    for (key, _) in args.iter() {
+        if !is_allowed_web_auth_key(env, &key) {
+            return Err(WebAuthError::MalformedArgument);
+        }
+    }
+
+    // 2. Enforce exact mandatory key set
+    let mandatory = [
+        "account",
+        "home_domain",
+        "web_auth_domain",
+        "web_auth_domain_account",
+        "nonce",
+    ];
+    for name in mandatory {
+        let sym = Symbol::new(env, name);
+        match args.get(sym) {
+            Some(val) if !val.is_empty() => {}
+            _ => return Err(WebAuthError::MalformedArgument),
+        }
+    }
+
+    // 3. Enforce paired optional client_domain / client_domain_account presence
+    let has_client_domain = args.contains_key(Symbol::new(env, "client_domain"));
+    let has_client_domain_acct = args.contains_key(Symbol::new(env, "client_domain_account"));
+    if has_client_domain != has_client_domain_acct {
+        return Err(WebAuthError::MalformedArgument);
+    }
+
+    Ok(())
+}

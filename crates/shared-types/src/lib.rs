@@ -35,6 +35,17 @@ pub enum ContractError {
 
 #[contracttype]
 #[derive(Clone, Debug, Eq, PartialEq)]
+pub struct PolicyConfigV2 {
+    pub version: u32, // 2
+    pub required_contract: Option<Address>,
+    pub required_function: Option<Symbol>,
+    /// Optional SHA-256 digest over the canonical XDR of the complete authorized Context.
+    pub expected_context_digest: Option<BytesN<32>>,
+    pub max_uses: u32,
+}
+
+#[contracttype]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub enum NetworkKind {
     Testnet,
     Futurenet,

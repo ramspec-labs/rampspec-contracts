@@ -47,6 +47,11 @@
       "web_auth_verify": { "cpuMax": 20000000, "memoryMax": 16000000, "storageWritesMax": 1, "eventsMax": 1, "ttl": "temporary" }
     }
   },
+  "webAuthVerifyScenarios": {
+    "mandatory_only": { "cpuMax": 15000000, "memoryMax": 12000000, "storageWritesMax": 1, "eventsMax": 1, "ttl": "temporary" },
+    "with_client_domain": { "cpuMax": 18000000, "memoryMax": 14000000, "storageWritesMax": 1, "eventsMax": 1, "ttl": "temporary" },
+    "boundary_sized": { "cpuMax": 20000000, "memoryMax": 16000000, "storageWritesMax": 1, "eventsMax": 1, "ttl": "temporary" }
+  },
   "growthModel": {
     "evidencePersistentEntriesPerPublication": 2,
     "additionalEntriesPerSupersession": 3,
