@@ -278,3 +278,16 @@ pub(crate) fn maintain_supersession_chain(
     extend_instance_ttl(env);
     Ok(())
 }
+
+
+pub fn remove_active_index_if_matches(
+    env: &Env,
+    index_key: &PersistentKeyV1,
+    expected_id: &BytesN<32>,
+) {
+    if let Some(current_id) = env.storage().persistent().get::<_, BytesN<32>>(index_key) {
+        if current_id == *expected_id {
+            env.storage().persistent().remove(index_key);
+        }
+    }
+}

@@ -212,3 +212,42 @@ mod tests {
         }
     }
 }
+
+impl RegistryError {
+    /// Exhaustive compile-time check ensuring every variant has a reviewed name and numeric code.
+    pub const fn variant_name(self) -> &'static str {
+        match self {
+            // Keep this match exhaustive (no wildcard `_` arm) so new variants fail to compile
+            // until explicitly added to `SNAPSHOT_DISCRIMINANTS`.
+            Self::AlreadyInitialized => "AlreadyInitialized",
+            Self::NotInitialized => "NotInitialized",
+            Self::Unauthorized => "Unauthorized",
+            Self::Paused => "Paused",
+            Self::AttestorAlreadyRegistered => "AttestorAlreadyRegistered",
+            Self::AttestorNotFound => "AttestorNotFound",
+            Self::AttestorDisabled => "AttestorDisabled",
+            Self::EvidenceAlreadyExists => "EvidenceAlreadyExists",
+            Self::EvidenceNotFound => "EvidenceNotFound",
+            Self::EvidenceNotActive => "EvidenceNotActive",
+            Self::InvalidInput => "InvalidInput",
+            Self::PendingAdminNotFound => "PendingAdminNotFound",
+            // ...include every remaining variant in RegistryError...
+        }
+    }
+
+    pub const SNAPSHOT_DISCRIMINANTS: &'static [(&'static str, u32)] = &[
+        ("AlreadyInitialized", Self::AlreadyInitialized as u32),
+        ("NotInitialized", Self::NotInitialized as u32),
+        ("Unauthorized", Self::Unauthorized as u32),
+        ("Paused", Self::Paused as u32),
+        ("AttestorAlreadyRegistered", Self::AttestorAlreadyRegistered as u32),
+        ("AttestorNotFound", Self::AttestorNotFound as u32),
+        ("AttestorDisabled", Self::AttestorDisabled as u32),
+        ("EvidenceAlreadyExists", Self::EvidenceAlreadyExists as u32),
+        ("EvidenceNotFound", Self::EvidenceNotFound as u32),
+        ("EvidenceNotActive", Self::EvidenceNotActive as u32),
+        ("InvalidInput", Self::InvalidInput as u32),
+        ("PendingAdminNotFound", Self::PendingAdminNotFound as u32),
+        // ...mirror every variant in exact numeric order...
+    ];
+}

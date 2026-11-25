@@ -7,6 +7,11 @@ use soroban_sdk::{
     testutils::Address as _,
 };
 
+
+use std::collections::{BTreeMap, BTreeSet};
+use rampspec_shared_types::RegistryError;
+use serde_json::Value;
+
 fn assert_schema<E: Event>(
     env: &Env,
     event: &E,
@@ -25,6 +30,45 @@ fn assert_schema<E: Event>(
     for field in data_fields {
         assert!(data.contains_key(Symbol::new(env, field)));
     }
+}
+
+#[test]
+fn registry_error_discriminants_match_canonical_spec_snapshot() {
+    let raw = std::fs::read_to_string("../../artifacts/specs/evidence_registry.json")
+        .expect("artifacts/specs/evidence_registry.json must exist");
+    let spec: Value = serde_json::from_str(&raw).expect("valid evidence_registry.json");
+
+    // Extract RegistryError enum cases from the generated contract spec
+    let spec_errors: BTreeMap<String, u32> = spec["errors"]
+        .as_array()
+        .or_else(|| spec["types"].as_array())
+        .expect("spec must contain errors/types array")
+        .iter()
+        .find(|entry| entry["name"].as_str() == Some("RegistryError"))
+        .and_then(|entry| entry["cases"].as_array())
+        .expect("RegistryError cases must be present in evidence_registry.json")
+        .iter()
+        .map(|case| {
+            let name = case["name"].as_str().expect("error case name").to_string();
+            let value = case["value"].as_u64().expect("error case u32 value") as u32;
+            (name, value)
+        })
+        .collect();
+
+    let mut seen_codes = BTreeSet::new();
+    let mut rust_errors = BTreeMap::new();
+    for &(name, code) in RegistryError::SNAPSHOT_DISCRIMINANTS {
+        assert!(
+            seen_codes.insert(code),
+            "duplicate RegistryError discriminant {code} for {name}"
+        );
+        rust_errors.insert(name.to_string(), code);
+    }
+
+    assert_eq!(
+        rust_errors, spec_errors,
+        "RegistryError discriminants drifted from artifacts/specs/evidence_registry.json"
+    );
 }
 
 #[test]
