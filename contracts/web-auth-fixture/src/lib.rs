@@ -1,5 +1,5 @@
 #![no_std]
-#![allow(clippy::missing_errors_doc, clippy::needless_pass_by_value)]
+#![allow(clippy::missing_errors_doc, clippy::needless_pass_by_value, clippy::too_many_arguments, clippy::fn_params_excessive_bools, clippy::must_use_candidate)]
 
 use soroban_sdk::{
     Address, BytesN, Env, Map, String, Symbol, contract, contracterror, contractevent,
@@ -496,4 +496,67 @@ mod tests {
             Err(Ok(WebAuthError::MalformedArgument))
         );
     }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct LedgerWindow {
+    pub valid_from: u32,
+    pub expires_at: u32,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum AuthError {
+    OutsideLedgerWindow,
+    InvalidClientDomainCombo,
+    UnauthorizedAccount,
+    ModeRejected,
+}
+
+pub fn is_within_ledger_window(window: &LedgerWindow, current_ledger: u32) -> bool {
+    window.valid_from <= current_ledger && current_ledger <= window.expires_at
+}
+
+pub fn validate_client_domain_combo(
+    has_client_domain_account: bool,
+    has_client_domain_signature: bool,
+    accounts_match: bool,
+    has_duplicate_domain: bool,
+) -> Result<(), AuthError> {
+    if has_duplicate_domain {
+        return Err(AuthError::InvalidClientDomainCombo);
+    }
+
+    match (has_client_domain_account, has_client_domain_signature) {
+        (false, false) => Ok(()),
+        (true, true) if accounts_match => Ok(()),
+        _ => Err(AuthError::InvalidClientDomainCombo),
+    }
+}
+
+pub fn evaluate_fixture_auth(
+    mode: FixtureMode,
+    window: &LedgerWindow,
+    current_ledger: u32,
+    is_authorized: bool,
+    has_client_domain_account: bool,
+    has_client_domain_signature: bool,
+    accounts_match: bool,
+    has_duplicate_domain: bool,
+) -> Result<(), AuthError> {
+    if !is_authorized {
+        return Err(AuthError::UnauthorizedAccount);
+    }
+    if !is_within_ledger_window(window, current_ledger) {
+        return Err(AuthError::OutsideLedgerWindow);
+    }
+    validate_client_domain_combo(
+        has_client_domain_account,
+        has_client_domain_signature,
+        accounts_match,
+        has_duplicate_domain,
+    )?;
+    if mode == FixtureMode::Reject {
+        return Err(AuthError::ModeRejected);
+    }
+    Ok(())
 }

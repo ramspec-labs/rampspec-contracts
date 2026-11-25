@@ -1,17 +1,33 @@
+param(
+  [Parameter(Mandatory = $true)][string]$LinuxManifestPath,
+  [Parameter(Mandatory = $true)][string]$WindowsManifestPath,
+  [string]$Toolchain = "pinned-rust-wasm32-unknown-unknown"
+)
+
 $ErrorActionPreference = "Stop"
-$firstDirectory = "artifacts/reproducibility/first"
-$secondDirectory = "artifacts/reproducibility/second"
 
-& "$PSScriptRoot/build-reproducible.ps1" -OutputDirectory $firstDirectory
-& "$PSScriptRoot/build-reproducible.ps1" -OutputDirectory $secondDirectory
+$linux = Get-Content -Raw -Path $LinuxManifestPath | ConvertFrom-Json
+$windows = Get-Content -Raw -Path $WindowsManifestPath | ConvertFrom-Json
 
-$first = Get-Content -LiteralPath (Join-Path $firstDirectory "checksums.sha256")
-$second = Get-Content -LiteralPath (Join-Path $secondDirectory "checksums.sha256")
-$difference = Compare-Object -ReferenceObject $first -DifferenceObject $second
-if ($difference) {
-    $difference | Format-Table | Out-String | Write-Error
-    throw "Repeated WASM builds produced different checksums."
+$mismatches = @()
+
+foreach ($contractName in $linux.contracts.PSObject.Properties.Name) {
+  $linuxHash = $linux.contracts.$contractName
+  $winHash = $windows.contracts.$contractName
+
+  if ($linuxHash -ne $winHash) {
+    $mismatches += [PSCustomObject]@{
+      toolchain = $Toolchain
+      contract  = $contractName
+      linuxSha256 = $linuxHash
+      windowsSha256 = $winHash
+    }
+  }
 }
 
-Write-Output "Repeated WASM builds are byte-for-byte reproducible."
-$first
+if ($mismatches.Count -gt 0) {
+  Write-Error ("WASM checksum mismatch detected under toolchain '{0}': {1}" -f $Toolchain, ($mismatches | ConvertTo-Json -Compress))
+  exit 1
+}
+
+Write-Output ("All contract WASM checksums match across Linux and Windows ({0})." -f $Toolchain)

@@ -66,3 +66,44 @@ if (live) {
 }
 
 process.stdout.write(`verified ${manifest.environment} deployment manifest${live ? " against RPC" : " offline"}\n`);
+
+export function verifyManifestAgainstRpc(manifest, rpcSnapshot) {
+  const errors = [];
+
+  if (!rpcSnapshot || rpcSnapshot.timedOut) {
+    return {
+      ok: false,
+      errors: ['RPC_TIMEOUT_OR_UNAVAILABLE'],
+    };
+  }
+
+  if (manifest.networkPassphrase !== rpcSnapshot.networkPassphrase) {
+    errors.push(
+      `NETWORK_PASSPHRASE_MISMATCH: expected=${manifest.networkPassphrase} actual=${rpcSnapshot.networkPassphrase}`
+    );
+  }
+
+  const contracts = Array.isArray(manifest.contracts) ? manifest.contracts : [];
+  const onChainById = new Map(
+    (rpcSnapshot.contracts || []).map((item) => [item.contractId, item])
+  );
+
+  for (const expected of contracts) {
+    const actual = onChainById.get(expected.contractId);
+    if (!actual) {
+      errors.push(`MISSING_ON_CHAIN_CONTRACT:${expected.contractId}`);
+      continue;
+    }
+    if (actual.wasmHash !== expected.wasmHash) {
+      errors.push(`WASM_HASH_MISMATCH:${expected.contractId}`);
+    }
+    if (actual.specHash !== expected.specHash) {
+      errors.push(`SPEC_HASH_MISMATCH:${expected.contractId}`);
+    }
+  }
+
+  return {
+    ok: errors.length === 0,
+    errors,
+  };
+}
