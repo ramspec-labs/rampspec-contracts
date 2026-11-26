@@ -2,8 +2,8 @@
 #![allow(clippy::missing_errors_doc, clippy::needless_pass_by_value)]
 
 use soroban_sdk::{
-    Address, BytesN, Env, Map, String, Symbol, contract, contracterror, contractevent,
-    contractimpl, contracttype,
+    contract, contracterror, contractevent, contractimpl, contracttype, Address, BytesN, Env, Map,
+    String, Symbol,
 };
 
 pub const SEP_45_VERSION: &str = "0.1.1";
@@ -45,6 +45,9 @@ pub struct FixtureConfig {
 enum DataKey {
     Config,
     Nonce(BytesN<32>),
+    /// Monotonic fixture configuration generation. Separate from `FixtureConfig`
+    /// so the public config layout stays compatible.
+    Generation,
 }
 
 #[contractevent]
@@ -116,6 +119,19 @@ fn read_config(env: &Env) -> Result<FixtureConfig, WebAuthError> {
         .ok_or(WebAuthError::NotInitialized)
 }
 
+fn read_generation(env: &Env) -> u32 {
+    env.storage()
+        .persistent()
+        .get(&DataKey::Generation)
+        .unwrap_or(0)
+}
+
+fn write_generation(env: &Env, generation: u32) {
+    env.storage()
+        .persistent()
+        .set(&DataKey::Generation, &generation);
+}
+
 struct ParsedArgs {
     account: Address,
     server: Address,
@@ -177,6 +193,7 @@ impl WebAuthFixture {
             expires_at_ledger,
         };
         env.storage().instance().set(&DataKey::Config, &config);
+        write_generation(&env, 1);
         FixtureConfigured {
             admin,
             mode,
@@ -196,10 +213,17 @@ impl WebAuthFixture {
         validate_window(valid_from_ledger, expires_at_ledger)?;
         let mut config = read_config(&env)?;
         config.admin.require_auth();
+        if config.mode == mode
+            && config.valid_from_ledger == valid_from_ledger
+            && config.expires_at_ledger == expires_at_ledger
+        {
+            return Ok(());
+        }
         config.mode = mode;
         config.valid_from_ledger = valid_from_ledger;
         config.expires_at_ledger = expires_at_ledger;
         env.storage().instance().set(&DataKey::Config, &config);
+        write_generation(&env, read_generation(&env).saturating_add(1));
         FixtureConfigured {
             admin: config.admin,
             mode,
@@ -208,6 +232,10 @@ impl WebAuthFixture {
         }
         .publish(&env);
         Ok(())
+    }
+
+    pub fn config_generation(env: Env) -> u32 {
+        read_generation(&env)
     }
 
     pub fn reset_nonce(env: Env, nonce: String) -> Result<(), WebAuthError> {
@@ -292,11 +320,11 @@ impl WebAuthFixture {
 mod tests {
     extern crate std;
 
-    use super::{FixtureMode, SEP_45_VERSION, WebAuthError, WebAuthFixture, WebAuthFixtureClient};
+    use super::{FixtureMode, WebAuthError, WebAuthFixture, WebAuthFixtureClient, SEP_45_VERSION};
     use soroban_sdk::{
-        Address, BytesN, Env, IntoVal, Map, String, Symbol,
         address_payload::AddressPayload,
         testutils::{Address as _, AuthorizedFunction, Events as _, Ledger as _},
+        Address, BytesN, Env, IntoVal, Map, String, Symbol,
     };
 
     const CURRENT_LEDGER: u32 = 100;
@@ -495,5 +523,58 @@ mod tests {
             client.try_web_auth_verify(&wrong_account_kind),
             Err(Ok(WebAuthError::MalformedArgument))
         );
+    }
+
+    #[test]
+    fn configuration_generation_is_idempotent_and_fail_closed() {
+        let (env, contract_id, _, _) = setup(FixtureMode::Accept);
+        let client = WebAuthFixtureClient::new(&env, &contract_id);
+        assert_eq!(client.config_generation(), 1);
+
+        let before = env.events().all().events().len();
+        client.configure(
+            &FixtureMode::Accept,
+            &(CURRENT_LEDGER - 1),
+            &(CURRENT_LEDGER + 1),
+        );
+        assert_eq!(client.config_generation(), 1);
+        assert_eq!(env.events().all().events().len(), before);
+
+        assert_eq!(
+            client.try_configure(&FixtureMode::Accept, &5, &1),
+            Err(Ok(WebAuthError::InvalidTimeWindow))
+        );
+        assert_eq!(client.config_generation(), 1);
+        assert_eq!(env.events().all().events().len(), before);
+
+        client.configure(
+            &FixtureMode::Reject,
+            &(CURRENT_LEDGER - 1),
+            &(CURRENT_LEDGER + 1),
+        );
+        assert_eq!(client.config_generation(), 2);
+        assert_eq!(env.events().all().events().len(), before + 1);
+    }
+
+    #[test]
+    fn rejected_nonce_reset_does_not_emit_or_consume() {
+        let (env, contract_id, account, server) = setup(FixtureMode::Accept);
+        let client = WebAuthFixtureClient::new(&env, &contract_id);
+        let nonce = String::from_str(&env, "missing-nonce");
+        let before = env.events().all().events().len();
+        assert_eq!(
+            client.try_reset_nonce(&nonce),
+            Err(Ok(WebAuthError::UnknownNonce))
+        );
+        assert!(!client.is_nonce_consumed(&nonce));
+        assert_eq!(env.events().all().events().len(), before);
+        assert_eq!(client.config_generation(), 1);
+
+        client.web_auth_verify(&args(&env, &account, &server, None, "once"));
+        env.cost_estimate().budget().reset_tracker();
+        client.reset_nonce(&String::from_str(&env, "once"));
+        let budget = env.cost_estimate().budget();
+        assert!(budget.cpu_instruction_cost() <= 15_000_000);
+        assert!(budget.memory_bytes_cost() <= 12_000_000);
     }
 }
