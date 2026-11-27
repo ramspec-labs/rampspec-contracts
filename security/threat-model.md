@@ -19,6 +19,8 @@ Explicit Soroban authorization protects every write; reads remain public. Versio
 
 Web-auth fixture events publish the account and a nonce hash, or the admin and a nonce hash, and never the raw nonce, domain secrets, or rejected argument text. A rejected verification or an unknown-nonce reset returns before any write or event. Configuration changes bump a separate generation counter; an identical configure call and a rejected time window leave that counter and the event stream unchanged.
 
+**Registry events are public and must contain only approved public information:** evidence identifiers, cryptographic commitments (report_hash, target_hash, suite_hash, reason_hash, metadata_hash), administrator/publisher/attestor/revoker/authorizer addresses, status flags, schema/version metadata, and authorization transition metadata. Events must never expose report bodies, raw report content, URLs, domains, API keys, passwords, access tokens, credentials, customer personal information, KYC data, or other private application data. Event schema and privacy tests enforce this boundary and fail if unapproved fields are introduced.
+
 Reproducible builds, canonical specs, generated clients, locked dependencies, fixture manifests, test-only ABI labels, deployment seals, released-WASM allowlisting, live code fetches, schema reads, event transaction capture, and secret scanning protect the supply and deployment paths. Passkey authorization binds the challenge to the exact Soroban payload and rejects malformed or high-S P-256 signatures before verification or replay writes. Property and fuzz tests cover state-machine and hostile-input behavior.
 
 ## Policy Account Fixture Event Privacy
