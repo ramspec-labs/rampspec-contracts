@@ -1,0 +1,200 @@
+{
+  "description": "Passkey-compatible assertion vectors for the policy-account fixture. Test-only: keys come from fixed seeds (0x21, 0x22, 0x23 repeated) and authenticator data is fixed filler; there are no production keys, credentials or relying-party identifiers.",
+  "policy": {
+    "admin": "GAIRCEIRCEIRCEIRCEIRCEIRCEIRCEIRCEIRCEIRCEIRCEIRCEIRCF6M",
+    "passkeySigners": [
+      {
+        "publicKey": "04462dba1ae4fc1a968b4dacf20cdd6dbe1fae34aa971514a63d3405c3d1cfd383b58bbb08c13383428c5853c71c4c851e134b056821e468fe0a977abf4313dde1",
+        "weight": 1
+      },
+      {
+        "publicKey": "04d65a93977caa3d1b081852ff57a79e465f1660577304baead505dd3a48589cf350185e895372df6221ea3a137557e473fddb6755f05bd507c3c533fce9c91285",
+        "weight": 1
+      }
+    ],
+    "threshold": 1
+  },
+  "regenerate": "RAMPSPEC_WRITE_VECTORS=1 cargo test -p policy-account-fixture --test passkey_vectors",
+  "replay": "No refused or trapped vector leaves a replay marker: the payload stays usable by a later valid assertion.",
+  "vectors": [
+    {
+      "assertion": {
+        "authenticatorData": "a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a50500000001",
+        "challenge": "4141414141414141414141414141414141414141414141414141414141414141",
+        "clientDataHash": "b6b6b6b6b6b6b6b6b6b6b6b6b6b6b6b6b6b6b6b6b6b6b6b6b6b6b6b6b6b6b6b6",
+        "publicKey": "04462dba1ae4fc1a968b4dacf20cdd6dbe1fae34aa971514a63d3405c3d1cfd383b58bbb08c13383428c5853c71c4c851e134b056821e468fe0a977abf4313dde1",
+        "signature": "3b02e55755fbd834ece30b56bdc3a30982e258fc41aedf6b1093c7f7c7cf7a82511715e78a8133f28c892143d376e25e0024ae86dc05bbfa2345f99a92c8711f"
+      },
+      "expected": {
+        "result": "accepted"
+      },
+      "name": "key-a-minimum-authenticator-data",
+      "payload": "4141414141414141414141414141414141414141414141414141414141414141"
+    },
+    {
+      "assertion": {
+        "authenticatorData": "a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a505000000015a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a",
+        "challenge": "4242424242424242424242424242424242424242424242424242424242424242",
+        "clientDataHash": "b6b6b6b6b6b6b6b6b6b6b6b6b6b6b6b6b6b6b6b6b6b6b6b6b6b6b6b6b6b6b6b6",
+        "publicKey": "04462dba1ae4fc1a968b4dacf20cdd6dbe1fae34aa971514a63d3405c3d1cfd383b58bbb08c13383428c5853c71c4c851e134b056821e468fe0a977abf4313dde1",
+        "signature": "f299b09aa7f688740de2139282e6f09608ae580e105091067464bd385970e46a7340e5ecf466bdf05b7256803f45de18005f61f2944d69c570e02c4dfb44997f"
+      },
+      "expected": {
+        "result": "accepted"
+      },
+      "name": "key-a-maximum-authenticator-data",
+      "payload": "4242424242424242424242424242424242424242424242424242424242424242"
+    },
+    {
+      "assertion": {
+        "authenticatorData": "a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a505000000015a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a",
+        "challenge": "4343434343434343434343434343434343434343434343434343434343434343",
+        "clientDataHash": "b6b6b6b6b6b6b6b6b6b6b6b6b6b6b6b6b6b6b6b6b6b6b6b6b6b6b6b6b6b6b6b6",
+        "publicKey": "04d65a93977caa3d1b081852ff57a79e465f1660577304baead505dd3a48589cf350185e895372df6221ea3a137557e473fddb6755f05bd507c3c533fce9c91285",
+        "signature": "e1c3075d40de79bdb40ed3331ec2bde9cf2942b529820982b3c4d1fa8037358a009f9009b81dabac9d8096c4e52d78d523ba5fcb1c81197e805eed5a9d65d34f"
+      },
+      "expected": {
+        "result": "accepted"
+      },
+      "name": "key-b-typical-authenticator-data",
+      "payload": "4343434343434343434343434343434343434343434343434343434343434343"
+    },
+    {
+      "assertion": {
+        "authenticatorData": "a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a50500000001",
+        "challenge": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+        "clientDataHash": "b6b6b6b6b6b6b6b6b6b6b6b6b6b6b6b6b6b6b6b6b6b6b6b6b6b6b6b6b6b6b6b6",
+        "publicKey": "04462dba1ae4fc1a968b4dacf20cdd6dbe1fae34aa971514a63d3405c3d1cfd383b58bbb08c13383428c5853c71c4c851e134b056821e468fe0a977abf4313dde1",
+        "signature": "3b02e55755fbd834ece30b56bdc3a30982e258fc41aedf6b1093c7f7c7cf7a82511715e78a8133f28c892143d376e25e0024ae86dc05bbfa2345f99a92c8711f"
+      },
+      "expected": {
+        "code": 16,
+        "error": "InvalidPasskey",
+        "result": "contractError"
+      },
+      "name": "challenge-differs-from-payload",
+      "payload": "4444444444444444444444444444444444444444444444444444444444444444"
+    },
+    {
+      "assertion": {
+        "authenticatorData": "a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a505000000",
+        "challenge": "4545454545454545454545454545454545454545454545454545454545454545",
+        "clientDataHash": "b6b6b6b6b6b6b6b6b6b6b6b6b6b6b6b6b6b6b6b6b6b6b6b6b6b6b6b6b6b6b6b6",
+        "publicKey": "04462dba1ae4fc1a968b4dacf20cdd6dbe1fae34aa971514a63d3405c3d1cfd383b58bbb08c13383428c5853c71c4c851e134b056821e468fe0a977abf4313dde1",
+        "signature": "c3707c21da4bbbd093722f3036d9251c052359a955cf74efd12f230c50a500c55651a9bffdbb12e908a2fa10df61796ecb2a33508d53eabb01b26beded6f0178"
+      },
+      "expected": {
+        "code": 16,
+        "error": "InvalidPasskey",
+        "result": "contractError"
+      },
+      "name": "authenticator-data-too-short",
+      "payload": "4545454545454545454545454545454545454545454545454545454545454545"
+    },
+    {
+      "assertion": {
+        "authenticatorData": "a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a505000000015a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a",
+        "challenge": "4646464646464646464646464646464646464646464646464646464646464646",
+        "clientDataHash": "b6b6b6b6b6b6b6b6b6b6b6b6b6b6b6b6b6b6b6b6b6b6b6b6b6b6b6b6b6b6b6b6",
+        "publicKey": "04462dba1ae4fc1a968b4dacf20cdd6dbe1fae34aa971514a63d3405c3d1cfd383b58bbb08c13383428c5853c71c4c851e134b056821e468fe0a977abf4313dde1",
+        "signature": "2c9314a4a968ca4c9dc273e6b0b6400f329581f1e76f8ec1a4615c5c9b54266f0c63d5a8b4eb61a5a61c6833d2506eb4d727bdb438af5b7ac46f7dba07f537a0"
+      },
+      "expected": {
+        "code": 16,
+        "error": "InvalidPasskey",
+        "result": "contractError"
+      },
+      "name": "authenticator-data-too-long",
+      "payload": "4646464646464646464646464646464646464646464646464646464646464646"
+    },
+    {
+      "assertion": {
+        "authenticatorData": "a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a50500000001",
+        "challenge": "4747474747474747474747474747474747474747474747474747474747474747",
+        "clientDataHash": "b6b6b6b6b6b6b6b6b6b6b6b6b6b6b6b6b6b6b6b6b6b6b6b6b6b6b6b6b6b6b6b6",
+        "publicKey": "04462dba1ae4fc1a968b4dacf20cdd6dbe1fae34aa971514a63d3405c3d1cfd383b58bbb08c13383428c5853c71c4c851e134b056821e468fe0a977abf4313dde1",
+        "signature": "3b02e55755fbd834ece30b56bdc3a30982e258fc41aedf6b1093c7f7c7cf7a82aee8ea17757ecc0e7376debc2c891da1bcc24c26cb11e28ad073d128699ab432"
+      },
+      "expected": {
+        "code": 16,
+        "error": "InvalidPasskey",
+        "result": "contractError"
+      },
+      "name": "high-s-signature",
+      "payload": "4747474747474747474747474747474747474747474747474747474747474747"
+    },
+    {
+      "assertion": {
+        "authenticatorData": "a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a50500000001",
+        "challenge": "4848484848484848484848484848484848484848484848484848484848484848",
+        "clientDataHash": "b6b6b6b6b6b6b6b6b6b6b6b6b6b6b6b6b6b6b6b6b6b6b6b6b6b6b6b6b6b6b6b6",
+        "publicKey": "042464a2f8813e007299b9c0beef9c8d6d8d17470b32bba0329c145f0cfc60b683f831a35205868db984da728a6a0e1129e8940e8b735798e65360dada93457645",
+        "signature": "080534deb9bddc84ad51b43fd671673de1a701831058f402cb7135e621c875482c035dec0b25d0fabd909565ecd816a4da9b6dbcd56816b3784acb153c1a63a2"
+      },
+      "expected": {
+        "code": 6,
+        "error": "UnauthorizedSigner",
+        "result": "contractError"
+      },
+      "name": "key-not-in-policy",
+      "payload": "4848484848484848484848484848484848484848484848484848484848484848"
+    },
+    {
+      "assertion": {
+        "authenticatorData": "a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a50500000001",
+        "challenge": "4949494949494949494949494949494949494949494949494949494949494949",
+        "clientDataHash": "b6b6b6b6b6b6b6b6b6b6b6b6b6b6b6b6b6b6b6b6b6b6b6b6b6b6b6b6b6b6b6b6",
+        "publicKey": "04462dba1ae4fc1a968b4dacf20cdd6dbe1fae34aa971514a63d3405c3d1cfd383b58bbb08c13383428c5853c71c4c851e134b056821e468fe0a977abf4313dde1",
+        "signature": "3a02e55755fbd834ece30b56bdc3a30982e258fc41aedf6b1093c7f7c7cf7a82511715e78a8133f28c892143d376e25e0024ae86dc05bbfa2345f99a92c8711f"
+      },
+      "expected": {
+        "result": "hostTrap"
+      },
+      "name": "signature-r-corrupted",
+      "payload": "4949494949494949494949494949494949494949494949494949494949494949"
+    },
+    {
+      "assertion": {
+        "authenticatorData": "a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a50500000001",
+        "challenge": "4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a",
+        "clientDataHash": "b7b6b6b6b6b6b6b6b6b6b6b6b6b6b6b6b6b6b6b6b6b6b6b6b6b6b6b6b6b6b6b6",
+        "publicKey": "04462dba1ae4fc1a968b4dacf20cdd6dbe1fae34aa971514a63d3405c3d1cfd383b58bbb08c13383428c5853c71c4c851e134b056821e468fe0a977abf4313dde1",
+        "signature": "3b02e55755fbd834ece30b56bdc3a30982e258fc41aedf6b1093c7f7c7cf7a82511715e78a8133f28c892143d376e25e0024ae86dc05bbfa2345f99a92c8711f"
+      },
+      "expected": {
+        "result": "hostTrap"
+      },
+      "name": "client-data-hash-tampered",
+      "payload": "4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a"
+    },
+    {
+      "assertion": {
+        "authenticatorData": "a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a50400000001",
+        "challenge": "4b4b4b4b4b4b4b4b4b4b4b4b4b4b4b4b4b4b4b4b4b4b4b4b4b4b4b4b4b4b4b4b",
+        "clientDataHash": "b6b6b6b6b6b6b6b6b6b6b6b6b6b6b6b6b6b6b6b6b6b6b6b6b6b6b6b6b6b6b6b6",
+        "publicKey": "04462dba1ae4fc1a968b4dacf20cdd6dbe1fae34aa971514a63d3405c3d1cfd383b58bbb08c13383428c5853c71c4c851e134b056821e468fe0a977abf4313dde1",
+        "signature": "3b02e55755fbd834ece30b56bdc3a30982e258fc41aedf6b1093c7f7c7cf7a82511715e78a8133f28c892143d376e25e0024ae86dc05bbfa2345f99a92c8711f"
+      },
+      "expected": {
+        "result": "hostTrap"
+      },
+      "name": "authenticator-data-tampered",
+      "payload": "4b4b4b4b4b4b4b4b4b4b4b4b4b4b4b4b4b4b4b4b4b4b4b4b4b4b4b4b4b4b4b4b"
+    },
+    {
+      "assertion": {
+        "authenticatorData": "a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a50500000001",
+        "challenge": "4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c",
+        "clientDataHash": "b6b6b6b6b6b6b6b6b6b6b6b6b6b6b6b6b6b6b6b6b6b6b6b6b6b6b6b6b6b6b6b6",
+        "publicKey": "04462dba1ae4fc1a968b4dacf20cdd6dbe1fae34aa971514a63d3405c3d1cfd383b58bbb08c13383428c5853c71c4c851e134b056821e468fe0a977abf4313dde1",
+        "signature": "9b1747d0b4d7bd94d5a57b037aa811ffda1b33b68e6cec1c36cd98d08e4c551e418cd11737d2de5a29fb22a710726404ef36dc87ba9a10bc75786f33aeae108f"
+      },
+      "expected": {
+        "result": "hostTrap"
+      },
+      "name": "signature-by-another-configured-key",
+      "payload": "4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c"
+    }
+  ],
+  "verification": "__check_auth with one Passkey envelope, the vector's payload as signature_payload, and one contract-call auth context (default controls require no particular contract or function). In order: challenge must equal the payload; authenticatorData must be 37 to 512 bytes; signature must be a canonical low-S P-256 signature (r || s, 64 bytes); publicKey must be a configured signer; then secp256r1 verification of sha256(authenticatorData || clientDataHash). The first four refuse with a contract error; a failed signature check traps in the host."
+}
