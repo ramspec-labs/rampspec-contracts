@@ -21,6 +21,10 @@ Web-auth fixture events publish the account and a nonce hash, or the admin and a
 
 Reproducible builds, canonical specs, generated clients, locked dependencies, fixture manifests, test-only ABI labels, deployment seals, released-WASM allowlisting, live code fetches, schema reads, event transaction capture, and secret scanning protect the supply and deployment paths. Passkey authorization binds the challenge to the exact Soroban payload and rejects malformed or high-S P-256 signatures before verification or replay writes. Property and fuzz tests cover state-machine and hostile-input behavior.
 
+## Policy Account Fixture Event Privacy
+
+Policy configuration events are public and indexable but must never expose sensitive authentication material. The `PolicyConfigurationChanged` event contains only the change type, version, policy commitment hash, signature mode, signer count, and threshold. Raw Ed25519 public keys, Ed25519 signatures, passkey public keys, passkey signatures, authenticator data, client authentication payloads, and rejected inputs never appear in events. Events are published only after successful, validated, authorized, non-idempotent configuration mutations. Failed operations, invalid inputs, unauthorized attempts, and idempotent updates produce no events and no partial state changes. This prevents information leakage through failed mutations while enabling external indexers to track legitimate policy evolution.
+
 ## Residual Risks
 
 An authorized attestor can commit false off-chain claims; consumers must verify the underlying report. Administrator or attestor key compromise remains an operational risk. Ledger retention and fee changes can affect availability and cost. The bounded supersession chain constrains on-chain traversal but indexers still need complete event history. Upgrade correctness depends on external review, rehearsal, signer custody, and monitoring. Cryptography is delegated to Soroban host functions and inherits platform risk. Test fixtures intentionally model only pinned scenarios and are unsafe as production identity policy.
