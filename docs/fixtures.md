@@ -24,4 +24,13 @@ commitment to the complete policy. It never includes public keys, signature
 bytes, authenticator data, or client data. Invalid and no-op configuration
 calls do not write storage, advance the version, or emit an event.
 
+The configuration version is a `u32` that starts at 1 and advances by exactly one
+per effective change, so `u32::MAX` is the last version a fixture can reach. An
+effective change at that version fails with `InvalidPolicy` (error 3) before
+anything is written: configuration, its commitment, the version, replay markers
+and TTLs stay as they were, and no event is published. The version never wraps
+or repeats. No-op calls still succeed at the bound, and authorization is checked
+before the version, so an unauthorized caller gets an authorization failure
+rather than the overflow error. `tests/versioning.rs` pins this behaviour.
+
 Do not deploy either fixture to pubnet, place assets under its address, reuse production administrator identities, or describe fixture acceptance as proof that a production wallet is secure.
