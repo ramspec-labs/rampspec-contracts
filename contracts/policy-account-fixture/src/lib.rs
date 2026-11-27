@@ -183,6 +183,37 @@ fn validate_passkey_policy(
     Ok(())
 }
 
+/// Ed25519 signers in canonical order: ascending by public key bytes. Equivalent policies listed
+/// in any order then store the same configuration, so they share one commitment and a reordered
+/// update is a no-op. Keys are unique by the time this runs (`validate_policy`).
+fn canonical_signers(signers: &Vec<Ed25519Signer>) -> Vec<Ed25519Signer> {
+    let mut sorted = Vec::<Ed25519Signer>::new(signers.env());
+    for signer in signers.iter() {
+        let key = signer.public_key.to_array();
+        let mut at = sorted.len();
+        while at > 0 && sorted.get_unchecked(at - 1).public_key.to_array() > key {
+            at -= 1;
+        }
+        sorted.insert(at, signer);
+    }
+    sorted
+}
+
+/// Passkey signers in canonical order: ascending by uncompressed public key bytes, as for
+/// `canonical_signers`.
+fn canonical_passkey_signers(signers: &Vec<PasskeySigner>) -> Vec<PasskeySigner> {
+    let mut sorted = Vec::<PasskeySigner>::new(signers.env());
+    for signer in signers.iter() {
+        let key = signer.public_key.to_array();
+        let mut at = sorted.len();
+        while at > 0 && sorted.get_unchecked(at - 1).public_key.to_array() > key {
+            at -= 1;
+        }
+        sorted.insert(at, signer);
+    }
+    sorted
+}
+
 fn read_config(env: &Env) -> Result<PolicyConfig, PolicyError> {
     env.storage()
         .instance()
@@ -310,7 +341,7 @@ impl PolicyAccountFixture {
             &env,
             &PolicyConfig {
                 admin,
-                signers,
+                signers: canonical_signers(&signers),
                 passkey_signers: Vec::new(&env),
                 threshold,
                 signature_mode: SignatureMode::Ed25519,
@@ -330,7 +361,7 @@ impl PolicyAccountFixture {
         config.admin.require_auth();
         let next = PolicyConfig {
             admin: config.admin.clone(),
-            signers,
+            signers: canonical_signers(&signers),
             passkey_signers: Vec::new(&env),
             threshold,
             signature_mode: SignatureMode::Ed25519,
@@ -355,7 +386,7 @@ impl PolicyAccountFixture {
         let next = PolicyConfig {
             admin: config.admin.clone(),
             signers: Vec::new(&env),
-            passkey_signers: signers,
+            passkey_signers: canonical_passkey_signers(&signers),
             threshold,
             signature_mode: SignatureMode::PasskeyCompatible,
             controls,

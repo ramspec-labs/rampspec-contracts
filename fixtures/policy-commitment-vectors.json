@@ -1,0 +1,119 @@
+{
+  "admin": "GAIRCEIRCEIRCEIRCEIRCEIRCEIRCEIRCEIRCEIRCEIRCEIRCEIRCF6M",
+  "commitment": "sha256 of the XDR of the stored PolicyConfig: admin, signers, passkey_signers, threshold, signature_mode, controls.",
+  "controls": "defaults: valid_from_ledger 0, expires_at_ledger 4294967295, reject_all false, no additional signer, contract or function",
+  "description": "SHA-256 policy commitments of the policy-account fixture for fixed, test-only policies. The keys are derived from fixed test seeds; there are no production keys or credentials.",
+  "orderingRule": "Signers are stored ascending by public key bytes (32-byte Ed25519 keys, 65-byte uncompressed P-256 keys), whatever order they are given in. Every permutation of a vector's signers yields its commitment.",
+  "passkeyVectors": "installed with set_passkeys after initialize, so their Ed25519 signer list is empty",
+  "regenerate": "RAMPSPEC_WRITE_VECTORS=1 cargo test -p policy-account-fixture --test commitment_ordering",
+  "vectors": [
+    {
+      "commitment": "5d3053aced2ba8a35fef29b7d8962c58662dc4f225319ca0494220ac7f3db40d",
+      "name": "ed25519-single",
+      "signatureMode": "Ed25519",
+      "signers": [
+        {
+          "publicKey": "8a88e3dd7409f195fd52db2d3cba5d72ca6709bf1d94121bf3748801b40f6f5c",
+          "weight": 1
+        }
+      ],
+      "threshold": 1
+    },
+    {
+      "commitment": "8ae4e986077803e14e692cfef52dec411a6523b02cc7db017927c1ef88ae74fe",
+      "name": "ed25519-two-of-three",
+      "signatureMode": "Ed25519",
+      "signers": [
+        {
+          "publicKey": "8139770ea87d175f56a35466c34c7ecccb8d8a91b4ee37a25df60f5b8fc9b394",
+          "weight": 1
+        },
+        {
+          "publicKey": "8a88e3dd7409f195fd52db2d3cba5d72ca6709bf1d94121bf3748801b40f6f5c",
+          "weight": 1
+        },
+        {
+          "publicKey": "ed4928c628d1c2c6eae90338905995612959273a5c63f93636c14614ac8737d1",
+          "weight": 1
+        }
+      ],
+      "threshold": 2
+    },
+    {
+      "commitment": "0452d3f44bb4b3f1f2c1babe85f0c79e715e6a050c22c661ac1b11e74eecfefe",
+      "name": "ed25519-three-of-three",
+      "signatureMode": "Ed25519",
+      "signers": [
+        {
+          "publicKey": "8139770ea87d175f56a35466c34c7ecccb8d8a91b4ee37a25df60f5b8fc9b394",
+          "weight": 1
+        },
+        {
+          "publicKey": "8a88e3dd7409f195fd52db2d3cba5d72ca6709bf1d94121bf3748801b40f6f5c",
+          "weight": 1
+        },
+        {
+          "publicKey": "ed4928c628d1c2c6eae90338905995612959273a5c63f93636c14614ac8737d1",
+          "weight": 1
+        }
+      ],
+      "threshold": 3
+    },
+    {
+      "commitment": "43667e5ef20735d449f1789b8587584949c6724e87c8d7128986278887916484",
+      "name": "ed25519-weighted",
+      "signatureMode": "Ed25519",
+      "signers": [
+        {
+          "publicKey": "8139770ea87d175f56a35466c34c7ecccb8d8a91b4ee37a25df60f5b8fc9b394",
+          "weight": 3
+        },
+        {
+          "publicKey": "8a88e3dd7409f195fd52db2d3cba5d72ca6709bf1d94121bf3748801b40f6f5c",
+          "weight": 2
+        },
+        {
+          "publicKey": "ca93ac1705187071d67b83c7ff0efe8108e8ec4530575d7726879333dbdabe7c",
+          "weight": 1
+        }
+      ],
+      "threshold": 3
+    },
+    {
+      "commitment": "134183634025e4ab4160a81491e72c1ba11ba2e33d84d0fb63ccd485abab658f",
+      "name": "passkey-two-of-two",
+      "signatureMode": "PasskeyCompatible",
+      "signers": [
+        {
+          "publicKey": "0407810ea974cea5773e63b897f37e3be9a09e7a5fe9b971a44d1065ac2a3a9311637e47a4f99464a0fdce44a88ec7d703a9183c1d06552d9e2d6b76069481c577",
+          "weight": 1
+        },
+        {
+          "publicKey": "04b0514c4c13540f2397f54719f3332e7ef38e42ad9dc08b71e660ce16b9e88d094e7f3adc888e944d45d5e4594e3fbe289180bb1cd7fc55d1b5c7cb501c09ca50",
+          "weight": 1
+        }
+      ],
+      "threshold": 2
+    },
+    {
+      "commitment": "06f9519663e8b30c5cd6072f8d379e507f429a11f7adcb4ae47bcd8e909732e3",
+      "name": "passkey-weighted",
+      "signatureMode": "PasskeyCompatible",
+      "signers": [
+        {
+          "publicKey": "0407810ea974cea5773e63b897f37e3be9a09e7a5fe9b971a44d1065ac2a3a9311637e47a4f99464a0fdce44a88ec7d703a9183c1d06552d9e2d6b76069481c577",
+          "weight": 1
+        },
+        {
+          "publicKey": "041e18532fd4754c02f3041d9c75ceb33b83ffd81ac7ce4fe882ccb1c98bc5896ea46c311c4e2ff40dd96a3653e6e45445d32dfe486eced75c7a90c6a18881c0a3",
+          "weight": 2
+        },
+        {
+          "publicKey": "04b0514c4c13540f2397f54719f3332e7ef38e42ad9dc08b71e660ce16b9e88d094e7f3adc888e944d45d5e4594e3fbe289180bb1cd7fc55d1b5c7cb501c09ca50",
+          "weight": 1
+        }
+      ],
+      "threshold": 2
+    }
+  ]
+}

@@ -17,6 +17,17 @@ attempt in both modes. A configured public key contributes weight at most once;
 duplicate passkey keys are rejected before assertion validation and failed
 attempts do not consume the payload replay marker.
 
+Signers are stored in canonical order: ascending by public key bytes (32-byte
+Ed25519 keys, 65-byte uncompressed P-256 keys), whatever order `initialize`,
+`set_signers` or `set_passkeys` receives them in. Duplicate keys are rejected
+first, on the list as given. Equivalent policies therefore store the same
+configuration and share one commitment, and an update that only reorders
+signers is a no-op: no write, no new version, no event. A configuration stored
+before this rule took effect is rewritten in canonical order by its next
+effective change. `fixtures/policy-commitment-vectors.json` publishes
+commitments for fixed test-only policies; `tests/commitment_ordering.rs` checks
+it against the contract and regenerates it with `RAMPSPEC_WRITE_VECTORS=1`.
+
 Successful initialization and effective changes to signers, passkeys, or
 controls publish `PolicyConfigurationChanged`. The event contains a monotonic
 configuration version, signature mode, signer count, threshold, and SHA-256
